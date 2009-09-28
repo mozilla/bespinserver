@@ -90,8 +90,7 @@ def start():
     
     config.set_profile('dev')
     
-    if options.server.try_build:
-        config.c.static_dir = (options.build_dir / "frontend").abspath()
+    config.c.static_dir = path(options.clientdir) / "src" / "html"
     
     if options.server.dburl:
         config.c.dburl = options.server.dburl

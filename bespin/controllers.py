@@ -33,6 +33,7 @@ from hashlib import sha256
 
 from urlrelay import URLRelay, register
 from paste.auth import auth_tkt
+from paste.proxy import Proxy
 import simplejson
 import tempfile
 from webob import Request, Response
@@ -1173,6 +1174,9 @@ def make_app():
 
     register("^/docs/code/", code_app)
     register("^/docs/", docs_app)
+    
+    proxy_app = Proxy("http://localhost:8081/")
+    register("^/.js/", proxy_app)
     
     for location, directory in c.static_map.items():
         topop = 1 + location.count('/')
