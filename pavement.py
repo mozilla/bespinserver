@@ -72,7 +72,7 @@ def develop():
     sh("pip install -r requirements.txt")
     narwhal = path("narwhal")
     if not narwhal.exists():
-        sh("git clone git@github.com:dangoor/narwhal.git")
+        sh("git clone git://github.com/dangoor/narwhal.git")
         sh("git checkout -b tusk-catalog origin/tusk-catalog", cwd=narwhal)
         sh("narwhal/bin/sea tusk install jack")
     client_package = path("../bespinclient/src/bespin-core")
