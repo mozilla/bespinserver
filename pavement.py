@@ -70,6 +70,13 @@ bespin_mobwrite=bespin.mobwrite.mobwrite_web:start_server
 def develop():
     sh("easy_install ext/pip-0.4.1.tar.gz")
     sh("pip install -r requirements.txt")
+    narwhal = path("narwhal")
+    if not narwhal.exists():
+        sh("git clone git@github.com:dangoor/narwhal.git")
+        sh("git checkout -b tusk-catalog origin/tusk-catalog", cwd=narwhal)
+        sh("narwhal/bin/sea tusk install jack")
+    client_package = path("../bespinclient/src/bespin-core")
+    sh("ln -sf %s narwhal/packages/" % (client_package.abspath()))
     
 @task
 def start():
