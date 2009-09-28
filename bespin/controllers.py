@@ -1160,6 +1160,14 @@ def scriptwrapper_middleware(app):
         start_response(result.status, result.headers.items())
         return [result.body]
     return new_app
+    
+class URLRelayCompatibleProxy(Proxy):
+    """URLRelay deep copies items from its cache, but there's
+    something on Paste's Proxy class that doesn't deepcopy
+    safely. This class works fine."""
+    
+    def __deepcopy__(self, memo):
+        return self
 
 def make_app():
     from webob import Response
@@ -1175,7 +1183,7 @@ def make_app():
     register("^/docs/code/", code_app)
     register("^/docs/", docs_app)
     
-    proxy_app = Proxy("http://localhost:8081/")
+    proxy_app = URLRelayCompatibleProxy("http://localhost:8081/")
     register("^/.js/", proxy_app)
     
     for location, directory in c.static_map.items():
