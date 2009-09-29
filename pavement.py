@@ -28,6 +28,8 @@
 
 import re
 import os
+import subprocess
+import sys
 
 from setuptools import find_packages
 from paver.setuputils import find_package_data
@@ -92,6 +94,7 @@ def start():
     """
     from bespin import config, controllers
     from paste.httpserver import serve
+    subprocess.Popen("narwhal/bin/sea jackup -p 8081".split(), stdout=sys.stdout)
     
     options.order('server')
     
