@@ -15,5 +15,5 @@ exports.app = function(env) {
 
 var options = {debug:true};
 
-exports.app = Jack.ShowExceptions(server.App(exports.app, options));
+exports.app = Jack.ContentLength(Jack.ShowExceptions(server.App(exports.app, options)));
 
