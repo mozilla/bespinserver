@@ -1202,6 +1202,4 @@ def make_app():
         app = TransLogger(app)
         
     app = scriptwrapper_middleware(app)
-    if c.global_pathpop:
-        app = pathpopper_middleware(app, c.global_pathpop)
     return app

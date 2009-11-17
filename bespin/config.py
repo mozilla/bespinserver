@@ -60,7 +60,6 @@ c.db_pool_overflow = 10
 c.secret = "This is the phrase that is used for secret stuff."
 c.pw_secret = "This phrase encrypts passwords."
 c.static_dir = path(os.path.abspath("%s/../../../frontend" % os.path.dirname(__file__)))
-c.global_pathpop = 0
 
 c.template_file_dir = None
 
@@ -215,7 +214,6 @@ def set_profile(profile):
         c.base_url = "http://localhost:8080/"
         c.email_host = None
         c.vcs_timeout = -1
-        c.global_pathpop = 1
 
 def load_config(configfile):
     cp = ConfigParser.ConfigParser()
