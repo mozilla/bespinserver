@@ -1,4 +1,5 @@
-syntax: glob
-
-*.pyc
-narwhal
+^BespinServer.egg-info
+\.pyc$
+^testfiles
+^devdata.db
+^devserver.log
