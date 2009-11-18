@@ -158,16 +158,6 @@ def test_login_without_cookie():
         dict(password="hulkrulez"))
     assert resp.cookies_set['auth_tkt']
     
-def test_static_files_with_auth():
-    _clear_db()
-    app = controllers.make_app()
-    app = BespinTestApp(app)
-    resp = app.get('/editor.html', status=302)
-    assert resp.location == "http://localhost/"
-    resp = app.post('/register/new/Aldus', dict(password="foo", 
-                                                email="a@b.com"))
-    resp = app.get('/editor.html')
-
 def test_register_existing_user_should_not_authenticate():
     s = _get_session(True)
     app_orig = controllers.make_app()
