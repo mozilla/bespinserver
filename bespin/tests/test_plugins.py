@@ -23,11 +23,20 @@
 
 from path import path
 
-from bespin import config, plugins
+from bespin import config, plugins, controllers
+
+from __init__ import BespinTestApp
+
+app = None
 
 def setup_module():
-    config.set_profile("test")
+    global app
+    config.set_profile('test')
+    app = controllers.make_app()
+    app = BespinTestApp(app)
+
     config.c.plugin_path = [(path(__file__).dirname() / "plugindir").abspath()]
+    config.c.plugin_default = [p.basename() for p in config.c.plugin_path[0].glob("*")]
     config.activate_profile()
 
 def test_plugin_metadata():
@@ -38,12 +47,21 @@ def test_plugin_metadata():
     assert p.exists
     assert not p.errors
     assert p.depends[0] == "plugin2"
+    s = p.scripts
+    assert len(s) == 2
+    assert "thecode.js" in s
+    assert "subdir/morecode.js" in s
+    text = p.get_script_text("thecode.js")
+    assert "this is the code" in text
     
     p = plugin_list[1]
     assert p.name == "plugin2"
     assert p.exists
     assert not p.errors
     assert not p.depends
+    s = p.scripts
+    assert len(s) == 1
+    assert s == ["mycode.js"]
     
     p = plugin_list[2]
     assert p.name == "plugin3"
@@ -53,4 +71,24 @@ def test_plugin_metadata():
     p = plugin_list[3]
     assert p.name == "NOT THERE"
     assert not p.exists
+    
+# Web tests
+
+def test_default_plugin_registration():
+    response = app.get("/plugin/register/defaults")
+    assert response.content_type == "text/javascript"
+    assert "plugin1" in response.body
+    assert "NOT THERE" not in response.body
+    assert "plugin3" not in response.body
+    
+def test_get_script_from_plugin():
+    response = app.get("/plugin/script/plugin1/thecode.js")
+    content_type = response.content_type
+    assert content_type == "text/javascript"
+    assert "this is the code" in response.body
+    
+def test_bad_script_request():
+    response = app.get("/plugin/script/NOPLUGIN/somefile.js", status=404)
+    response = app.get('/plugin/script/../somefile.js', status=400)
+    response = app.get('/plugin/script/foo/../bar.js', status=400)
     

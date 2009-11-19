@@ -44,7 +44,7 @@ from bespin import vcs, deploy
 from bespin.database import User, get_project
 from bespin.filesystem import NotAuthorized, OverQuota, File
 from bespin.utils import send_email_template
-from bespin import jsontemplate, filesystem, queue
+from bespin import jsontemplate, filesystem, queue, plugins
 
 log = logging.getLogger("bespin.controllers")
 
@@ -1103,19 +1103,43 @@ def run_deploy(request, response):
     return response()
     
 @expose(r'^/plugin/register/defaults$', 'GET', auth=False)
-def load_plugin(request, response):
+def register_plugins(request, response):
     response.content_type = "text/javascript"
-    response.body = """; tiki.register('mypack', {"depends":["tiki", "tiki/system", "sproutcore"], "packages": {"tiki":{}, "tiki/system":{}, "sproutcore":{}}, "scripts": [{"url": "/server/plugin/script/mypack/test.js", "id": "mypack:test.js"}]});"""
+    
+    parts = []
+    for plugin in plugins.find_plugins(c.plugin_default):
+        if plugin.exists and not plugin.errors:
+            name = plugin.name
+            scripts = [
+                {"url": "/server/plugin/script/%s/%s" % (name, scriptname),
+                "id": "%s:%s" % (name, scriptname)}
+                for scriptname in plugin.scripts
+            ]
+            item = {"depends": plugin.depends, "scripts": scripts}
+            parts.append("""; tiki.register('%s', %s)""" % (name, simplejson.dumps(item)))
+    response.body = "\n".join(parts)
     return response()
 
 @expose(r'^/plugin/script/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
 def load_script(request, response):
-    response.content_Type = "text/javascript"
-    response.body = """; tiki.module('mypack:test', function(require, exports, module) {
-console.log("I'm in my pack!");
-exports.foo = "Bar!";
-
-;}); tiki.script('mypack:test.js');"""
+    response.content_type = "text/javascript"
+    plugin_name = request.kwargs['plugin_name']
+    script_path = request.kwargs['path']
+    if ".." in plugin_name or ".." in script_path:
+        raise BadRequest("'..' not allowed in plugin or script names")
+        
+    plugin = plugins.find_plugins([plugin_name])[0]
+    if not plugin.exists:
+        response.status = "404 Not Found"
+        response.content_type = "text/plain"
+        response.body = "Plugin " + plugin_name + " does not exist"
+        return response()
+    
+    script_text = plugin.get_script_text(script_path)
+    response.body = """; tiki.module('%s:%s', function(require, exports, module) {
+%s
+;}); tiki.script('%s:%s');""" % (plugin_name, os.path.splitext(script_path)[0], 
+        script_text, plugin_name, script_path)
     return response();
 
 

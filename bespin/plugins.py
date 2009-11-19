@@ -68,6 +68,31 @@ class Plugin(object):
                         md = {}
             self._metadata = md
             return md
+            
+    @property
+    def scripts(self):
+        try:
+            return self._scripts
+        except AttributeError:
+            if not self.exists:
+                scripts = []
+            else:
+                loc = self.location
+                scripts = [loc.relpathto(f) for f in self.location.walkfiles("*.js")]
+            self._scripts = scripts
+            return scripts
+    
+    def get_script_text(self, scriptname):
+        if not self.exists:
+            return None
+            
+        script_path = self.location / scriptname
+        if not script_path.exists():
+            return None
+        
+        return script_path.text()
+        
+                
 
 def find_plugins(names):
     """Return plugin descriptors for the plugins given in the list 'names'."""
