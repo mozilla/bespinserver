@@ -1101,6 +1101,22 @@ def run_deploy(request, response):
     response.body = simplejson.dumps(dict(jobid=jobid, 
         taskname="deploy %s" % (project_name)))
     return response()
+    
+@expose(r'^/plugin/register/defaults$', 'GET', auth=False)
+def load_plugin(request, response):
+    response.content_type = "text/javascript"
+    response.body = """; tiki.register('mypack', {"depends":["tiki", "tiki/system", "sproutcore"], "packages": {"tiki":{}, "tiki/system":{}, "sproutcore":{}}, "scripts": [{"url": "/server/plugin/script/mypack/test.js", "id": "mypack:test.js"}]});"""
+    return response()
+
+@expose(r'^/plugin/script/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
+def load_script(request, response):
+    response.content_Type = "text/javascript"
+    response.body = """; tiki.module('mypack:test', function(require, exports, module) {
+console.log("I'm in my pack!");
+exports.foo = "Bar!";
+
+;}); tiki.script('mypack:test.js');"""
+    return response();
 
 
 def db_middleware(app):

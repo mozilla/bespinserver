@@ -61,6 +61,8 @@ c.secret = "This is the phrase that is used for secret stuff."
 c.pw_secret = "This phrase encrypts passwords."
 c.static_dir = path(os.path.abspath("%s/../../../frontend" % os.path.dirname(__file__)))
 
+c.plugin_path = []
+
 c.template_file_dir = None
 
 c.docs_dir = os.path.abspath("%s/../../../docs" % os.path.dirname(__file__))
@@ -214,6 +216,9 @@ def set_profile(profile):
         c.base_url = "http://localhost:8080/"
         c.email_host = None
         c.vcs_timeout = -1
+        
+        c.plugin_path = [path.getcwd() / ".." / "bespinclient" / "plugins" / "bespin-supported"]
+        c.plugin_default = [p.basename() for p in c.plugin_path[0].glob("*")]
 
 def load_config(configfile):
     cp = ConfigParser.ConfigParser()
