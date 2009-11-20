@@ -1107,6 +1107,7 @@ def register_plugins(request, response):
     response.content_type = "text/javascript"
     
     parts = []
+    metadata = dict()
     for plugin in plugins.find_plugins(c.plugin_default):
         if plugin.exists and not plugin.errors:
             name = plugin.name
@@ -1117,6 +1118,8 @@ def register_plugins(request, response):
             ]
             item = {"depends": plugin.depends, "scripts": scripts}
             parts.append("""; tiki.register('%s', %s)""" % (name, simplejson.dumps(item)))
+            metadata[name] = plugin.metadata
+    parts.append("""; tiki.require("bespin")._container.getComponent('plugins', function(plugins) { plugins.load(%s)})""" % simplejson.dumps(metadata))
     response.body = "\n".join(parts)
     return response()
 
