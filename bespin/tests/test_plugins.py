@@ -40,7 +40,7 @@ def setup_module():
 
 def test_plugin_metadata():
     plugin_list = list(plugins.find_plugins())
-    assert len(plugin_list) == 4
+    assert len(plugin_list) == 5
     p = plugin_list[0]
     assert p.name == "plugin1"
     assert not p.errors
@@ -63,11 +63,27 @@ def test_plugin_metadata():
     p = plugin_list[2]
     assert p.name == "plugin3"
     assert p.errors[0] == "Problem with metadata JSON: No JSON object could be decoded"
+    
+    p = plugin_list[3]
+    assert p.name == "SingleFilePlugin1"
+    errors = p.errors
+    assert errors == []
+    s = p.scripts
+    assert s == [""]
+    script_text = p.get_script_text("")
+    assert "exports.someFunction" in script_text
+    
+    p = plugin_list[4]
+    assert p.name == "SingleFilePlugin2"
+    errors = p.errors
+    assert errors
 
 def test_lookup_plugin():
     plugin = plugins.lookup_plugin("DOES NOT EXIST")
     assert plugin is None
     plugin = plugins.lookup_plugin("plugin1")
+    assert not plugin.errors
+    plugin = plugins.lookup_plugin("SingleFilePlugin1")
     assert not plugin.errors
     
     
@@ -85,6 +101,13 @@ def test_get_script_from_plugin():
     content_type = response.content_type
     assert content_type == "text/javascript"
     assert "this is the code" in response.body
+
+def test_get_single_file_script():
+    response = app.get("/plugin/script/SingleFilePlugin1/")
+    content_type = response.content_type
+    assert content_type == "text/javascript"
+    assert "exports.someFunction" in response.body
+    
     
 def test_bad_script_request():
     response = app.get("/plugin/script/NOPLUGIN/somefile.js", status=404)

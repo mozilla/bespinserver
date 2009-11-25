@@ -48,17 +48,31 @@ class Plugin(object):
         try:
             return self._metadata
         except AttributeError:
-            md_path = self.location / "plugin.json"
-            if not md_path.exists():
-                md = {}
-                self._errors = ["Plugin metadata file (plugin.json) file is missing"]
-            else:
-                md_text = md_path.text()
-                try:
-                    md = loads(md_text)
-                except Exception, e:
-                    self._errors = ["Problem with metadata JSON: %s" % (e)]
+            if self.location.isdir():
+                md_path = self.location / "plugin.json"
+                if not md_path.exists():
                     md = {}
+                    self._errors = ["Plugin metadata file (plugin.json) file is missing"]
+                else:
+                    md_text = md_path.text()
+            else:
+                lines = self.location.lines()
+                start = -1
+                end = -1
+                for i in xrange(0, len(lines)):
+                    if "// ---plugin.json---" in lines[i]:
+                        start = i
+                    elif "// ---" in lines[i]:
+                        end = i
+                        break
+                md_text = "\n".join(lines[start+1:end])
+                
+            try:
+                md = loads(md_text)
+            except Exception, e:
+                self._errors = ["Problem with metadata JSON: %s" % (e)]
+                md = {}
+                
             self._metadata = md
             return md
             
@@ -68,12 +82,18 @@ class Plugin(object):
             return self._scripts
         except AttributeError:
             loc = self.location
-            scripts = [loc.relpathto(f) for f in self.location.walkfiles("*.js")]
+            if loc.isdir():
+                scripts = [loc.relpathto(f) for f in self.location.walkfiles("*.js")]
+            else:
+                scripts = [""]
             self._scripts = scripts
             return scripts
     
     def get_script_text(self, scriptname):
         """Look up the script at scriptname within this plugin."""
+        if not self.location.isdir():
+            return self.location.text()
+            
         script_path = self.location / scriptname
         if not script_path.exists():
             return None
@@ -91,11 +111,22 @@ def find_plugins(search_path=None):
         
     result = []
     for path in search_path:
-        for name in path.glob("*"):
-            name = name.basename()
+        for item in path.glob("*"):
+            # plugins are directories with a plugin.json file or 
+            # individual .js files.
+            if item.isdir():
+                mdfile = item / "plugin.json"
+                if not mdfile.exists():
+                    continue
+                name = item.basename()
+            elif item.ext == ".js":
+                name = item.splitext()[0].basename()
+            else:
+                continue
+                
             plugin = Plugin(name)
             result.append(plugin)
-            plugin.location = path / name
+            plugin.location = item
     return result
     
 def lookup_plugin(name, search_path=None):
@@ -105,6 +136,8 @@ def lookup_plugin(name, search_path=None):
         
     for path in search_path:
         location = path / name
+        if not location.exists():
+            location = path / (name + ".js")
         if location.exists():
             plugin = Plugin(name)
             plugin.location = location
