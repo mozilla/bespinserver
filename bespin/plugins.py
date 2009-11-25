@@ -65,6 +65,12 @@ class Plugin(object):
                     elif "// ---" in lines[i]:
                         end = i
                         break
+                
+                if start == -1 or end == -1:
+                    self._errors = ["Plugin metadata is missing or badly formatted."]
+                    self._metadata = {}
+                    return self._metadata
+                    
                 md_text = "\n".join(lines[start+1:end])
                 
             try:
