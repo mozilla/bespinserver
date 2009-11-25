@@ -20,10 +20,14 @@
 # 
 # ***** END LICENSE BLOCK *****
 # 
+import re
 
 from simplejson import loads
 
 from bespin import config
+
+_metadata_declaration = re.compile("^[^=]*=\s*")
+_trailing_semi = re.compile(";*\s*$")
 
 class Plugin(object):
     def __init__(self, name):
@@ -72,6 +76,8 @@ class Plugin(object):
                     return self._metadata
                     
                 md_text = "\n".join(lines[start+1:end])
+                md_text = _metadata_declaration.sub("", md_text)
+                md_text = _trailing_semi.sub("", md_text)
                 
             try:
                 md = loads(md_text)
