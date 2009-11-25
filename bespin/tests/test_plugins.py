@@ -143,8 +143,22 @@ def test_user_installed_plugins():
     sfp = (path(__file__).dirname() / "plugindir").abspath() / "SingleFilePlugin1.js"
     sfp_content = sfp.text()
     response = app.put("/file/at/BespinSettings/plugins/MyPlugin.js", sfp_content)
+    response = app.put("/file/at/BespinSettings/plugins/BiggerPlugin/plugin.json", "{}");
+    response = app.get("/plugin/register/user")
+    assert response.content_type == "text/javascript"
+    assert "MyPlugin" in response.body
+    assert "BiggerPlugin" in response.body
+    assert "EditablePlugin" not in response.body
+    
+    response = app.put("/file/at/myplugins/EditablePlugin/plugin.json", "{}")
+    response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
+"path": ["myplugins/"],
+"pluginOrdering": ["EditablePlugin"]
+}""")
     response = app.get("/plugin/register/user")
     assert response.content_type == "text/javascript"
     print response.body[:200]
     assert "MyPlugin" in response.body
+    assert "BiggerPlugin" in response.body
+    assert "EditablePlugin" in response.body
     

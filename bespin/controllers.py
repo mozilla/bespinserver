@@ -42,7 +42,7 @@ from bespin.config import c
 from bespin.framework import expose, BadRequest
 from bespin import vcs, deploy
 from bespin.database import User, get_project
-from bespin.filesystem import NotAuthorized, OverQuota, File
+from bespin.filesystem import NotAuthorized, OverQuota, File, FileNotFound
 from bespin.utils import send_email_template
 from bespin import jsontemplate, filesystem, queue, plugins
 
@@ -1130,7 +1130,24 @@ def register_plugins(request, response):
 def register_user_plugins(request, response):
     user = request.user
     project = get_project(user, user, "BespinSettings")
-    path = [project.location / "plugins"]
+    
+    pluginInfo = None
+    try:
+        pluginInfo_content = project.get_file("pluginInfo.json")
+        pluginInfo = simplejson.loads(pluginInfo_content)
+    except FileNotFound:
+        pass
+    except ValueError:
+        pass
+    
+    path = []
+    if pluginInfo:
+        pi_path = pluginInfo.get("path", None)
+        if pi_path:
+            root = user.get_location()
+            path.extend(root / p for p in pi_path)
+        
+    path.append(project.location / "plugins")
     return _plugin_response(response, path)
 
 @expose(r'^/plugin/script/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
