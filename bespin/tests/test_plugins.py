@@ -24,10 +24,13 @@
 from path import path
 
 from bespin import config, plugins, controllers
+from bespin.database import User, Base
 
 from __init__ import BespinTestApp
 
 app = None
+
+plugindir = (path(__file__).dirname() / "plugindir").abspath()
 
 def setup_module():
     global app
@@ -35,8 +38,29 @@ def setup_module():
     app = controllers.make_app()
     app = BespinTestApp(app)
 
-    config.c.plugin_path = [(path(__file__).dirname() / "plugindir").abspath()]
+    config.c.plugin_path = [plugindir]
     config.activate_profile()
+
+def _init_data():
+    global macgyver, someone_else, murdoc
+    config.activate_profile()
+    
+    fsroot = config.c.fsroot
+    if fsroot.exists() and fsroot.basename() == "testfiles":
+        fsroot.rmtree()
+    fsroot.makedirs()
+    
+    app.reset()
+    
+    Base.metadata.drop_all(bind=config.c.dbengine)
+    Base.metadata.create_all(bind=config.c.dbengine)
+    s = config.c.session_factory()
+    
+    app.post("/register/new/MacGyver", 
+        dict(password="richarddean", email="rich@sg1.com"))
+        
+    macgyver = User.find_user("MacGyver")
+
 
 def test_plugin_metadata():
     plugin_list = list(plugins.find_plugins())
@@ -86,7 +110,6 @@ def test_lookup_plugin():
     plugin = plugins.lookup_plugin("SingleFilePlugin1")
     assert not plugin.errors
     
-    
 # Web tests
 
 def test_default_plugin_registration():
@@ -114,4 +137,14 @@ def test_bad_script_request():
     response = app.get("/plugin/script/NOPLUGIN/somefile.js", status=404)
     response = app.get('/plugin/script/../somefile.js', status=400)
     response = app.get('/plugin/script/foo/../bar.js', status=400)
+    
+def test_user_installed_plugins():
+    _init_data()
+    sfp = (path(__file__).dirname() / "plugindir").abspath() / "SingleFilePlugin1.js"
+    sfp_content = sfp.text()
+    response = app.put("/file/at/BespinSettings/plugins/MyPlugin.js", sfp_content)
+    response = app.get("/plugin/register/user")
+    assert response.content_type == "text/javascript"
+    print response.body[:200]
+    assert "MyPlugin" in response.body
     

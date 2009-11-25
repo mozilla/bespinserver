@@ -1102,13 +1102,12 @@ def run_deploy(request, response):
         taskname="deploy %s" % (project_name)))
     return response()
     
-@expose(r'^/plugin/register/defaults$', 'GET', auth=False)
-def register_plugins(request, response):
+def _plugin_response(response, path=None):
     response.content_type = "text/javascript"
     
     parts = []
     metadata = dict()
-    for plugin in plugins.find_plugins():
+    for plugin in plugins.find_plugins(path):
         if not plugin.errors:
             name = plugin.name
             scripts = [
@@ -1122,6 +1121,17 @@ def register_plugins(request, response):
     parts.append("""; tiki.require("bespin")._container.getComponent('plugins', function(plugins) { plugins.load(%s)})""" % simplejson.dumps(metadata))
     response.body = "\n".join(parts)
     return response()
+
+@expose(r'^/plugin/register/defaults$', 'GET', auth=False)
+def register_plugins(request, response):
+    return _plugin_response(response)
+    
+@expose(r'^/plugin/register/user$', 'GET', auth=True)
+def register_user_plugins(request, response):
+    user = request.user
+    project = get_project(user, user, "BespinSettings")
+    path = [project.location / "plugins"]
+    return _plugin_response(response, path)
 
 @expose(r'^/plugin/script/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
 def load_script(request, response):
