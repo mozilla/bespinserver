@@ -1138,10 +1138,15 @@ def load_script(request, response):
         response.body = "Plugin " + plugin_name + " does not exist"
         return response()
     
+    if script_path:
+        module_name = os.path.splitext(script_path)[0]
+    else:
+        module_name = "package"
+        
     script_text = plugin.get_script_text(script_path)
     response.body = """; tiki.module('%s:%s', function(require, exports, module) {
 %s
-;}); tiki.script('%s:%s');""" % (plugin_name, os.path.splitext(script_path)[0], 
+;}); tiki.script('%s:%s');""" % (plugin_name, module_name, 
         script_text, plugin_name, script_path)
     return response();
 

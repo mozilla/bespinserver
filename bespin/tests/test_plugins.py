@@ -107,6 +107,7 @@ def test_get_single_file_script():
     content_type = response.content_type
     assert content_type == "text/javascript"
     assert "exports.someFunction" in response.body
+    assert "SingleFilePlugin1:package" in response.body
     
     
 def test_bad_script_request():
