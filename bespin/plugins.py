@@ -32,10 +32,6 @@ class Plugin(object):
         self.location = None
     
     @property
-    def exists(self):
-        return self.location != None
-        
-    @property
     def errors(self):
         md = self.metadata
         return self._errors
@@ -52,20 +48,17 @@ class Plugin(object):
         try:
             return self._metadata
         except AttributeError:
-            if not self.exists:
+            md_path = self.location / "plugin.json"
+            if not md_path.exists():
                 md = {}
+                self._errors = ["Plugin metadata file (plugin.json) file is missing"]
             else:
-                md_path = self.location / "plugin.json"
-                if not md_path.exists():
+                md_text = md_path.text()
+                try:
+                    md = loads(md_text)
+                except Exception, e:
+                    self._errors = ["Problem with metadata JSON: %s" % (e)]
                     md = {}
-                    self._errors = ["Plugin metadata file (plugin.json) file is missing"]
-                else:
-                    md_text = md_path.text()
-                    try:
-                        md = loads(md_text)
-                    except Exception, e:
-                        self._errors = ["Problem with metadata JSON: %s" % (e)]
-                        md = {}
             self._metadata = md
             return md
             
@@ -74,18 +67,13 @@ class Plugin(object):
         try:
             return self._scripts
         except AttributeError:
-            if not self.exists:
-                scripts = []
-            else:
-                loc = self.location
-                scripts = [loc.relpathto(f) for f in self.location.walkfiles("*.js")]
+            loc = self.location
+            scripts = [loc.relpathto(f) for f in self.location.walkfiles("*.js")]
             self._scripts = scripts
             return scripts
     
     def get_script_text(self, scriptname):
-        if not self.exists:
-            return None
-            
+        """Look up the script at scriptname within this plugin."""
         script_path = self.location / scriptname
         if not script_path.exists():
             return None
@@ -94,17 +82,32 @@ class Plugin(object):
         
                 
 
-def find_plugins(names):
-    """Return plugin descriptors for the plugins given in the list 'names'."""
-    result = []
-    for name in names:
-        plugin = Plugin(name)
-        result.append(plugin)
-        for path in config.c.plugin_path:
-            location = path / name
-            if location.exists() and location.isdir():
-                plugin.location = location
-                break
+def find_plugins(search_path=None):
+    """Return plugin descriptors for the plugins on the search_path.
+    If the search_path is not given, the configured plugin_path will
+    be used."""
+    if search_path is None:
+        search_path = config.c.plugin_path
         
+    result = []
+    for path in search_path:
+        for name in path.glob("*"):
+            name = name.basename()
+            plugin = Plugin(name)
+            result.append(plugin)
+            plugin.location = path / name
     return result
     
+def lookup_plugin(name, search_path=None):
+    """Return the plugin descriptor for the plugin given."""
+    if search_path is None:
+        search_path = config.c.plugin_path
+        
+    for path in search_path:
+        location = path / name
+        if location.exists():
+            plugin = Plugin(name)
+            plugin.location = location
+            return plugin
+    
+    return None

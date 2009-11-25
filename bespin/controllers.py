@@ -1108,8 +1108,8 @@ def register_plugins(request, response):
     
     parts = []
     metadata = dict()
-    for plugin in plugins.find_plugins(c.plugin_default):
-        if plugin.exists and not plugin.errors:
+    for plugin in plugins.find_plugins():
+        if not plugin.errors:
             name = plugin.name
             scripts = [
                 {"url": "/server/plugin/script/%s/%s" % (name, scriptname),
@@ -1131,8 +1131,8 @@ def load_script(request, response):
     if ".." in plugin_name or ".." in script_path:
         raise BadRequest("'..' not allowed in plugin or script names")
         
-    plugin = plugins.find_plugins([plugin_name])[0]
-    if not plugin.exists:
+    plugin = plugins.lookup_plugin(plugin_name)
+    if not plugin:
         response.status = "404 Not Found"
         response.content_type = "text/plain"
         response.body = "Plugin " + plugin_name + " does not exist"

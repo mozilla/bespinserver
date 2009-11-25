@@ -218,7 +218,6 @@ def set_profile(profile):
         c.vcs_timeout = -1
         
         c.plugin_path = [path.getcwd() / ".." / "bespinclient" / "plugins" / "bespin-supported"]
-        c.plugin_default = [p.basename() for p in c.plugin_path[0].glob("*")]
 
 def load_config(configfile):
     cp = ConfigParser.ConfigParser()

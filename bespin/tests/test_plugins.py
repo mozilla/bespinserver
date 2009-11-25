@@ -36,15 +36,13 @@ def setup_module():
     app = BespinTestApp(app)
 
     config.c.plugin_path = [(path(__file__).dirname() / "plugindir").abspath()]
-    config.c.plugin_default = [p.basename() for p in config.c.plugin_path[0].glob("*")]
     config.activate_profile()
 
 def test_plugin_metadata():
-    plugin_list = list(plugins.find_plugins(["plugin1", "plugin2", "plugin3", "NOT THERE"]))
+    plugin_list = list(plugins.find_plugins())
     assert len(plugin_list) == 4
     p = plugin_list[0]
     assert p.name == "plugin1"
-    assert p.exists
     assert not p.errors
     assert p.depends[0] == "plugin2"
     s = p.scripts
@@ -56,7 +54,6 @@ def test_plugin_metadata():
     
     p = plugin_list[1]
     assert p.name == "plugin2"
-    assert p.exists
     assert not p.errors
     assert not p.depends
     s = p.scripts
@@ -65,12 +62,14 @@ def test_plugin_metadata():
     
     p = plugin_list[2]
     assert p.name == "plugin3"
-    assert p.exists
     assert p.errors[0] == "Problem with metadata JSON: No JSON object could be decoded"
+
+def test_lookup_plugin():
+    plugin = plugins.lookup_plugin("DOES NOT EXIST")
+    assert plugin is None
+    plugin = plugins.lookup_plugin("plugin1")
+    assert not plugin.errors
     
-    p = plugin_list[3]
-    assert p.name == "NOT THERE"
-    assert not p.exists
     
 # Web tests
 
