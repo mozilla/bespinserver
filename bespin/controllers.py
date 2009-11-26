@@ -1118,7 +1118,7 @@ def _plugin_response(response, path=None):
             item = {"depends": plugin.depends, "scripts": scripts}
             parts.append("""; tiki.register('%s', %s)""" % (name, simplejson.dumps(item)))
             metadata[name] = plugin.metadata
-    parts.append("""; tiki.require("bespin")._container.getComponent('plugins', function(plugins) { plugins.load(%s)})""" % simplejson.dumps(metadata))
+    parts.append("""; tiki.require("bespin:plugins").catalog.load(%s);""" % simplejson.dumps(metadata))
     response.body = "\n".join(parts)
     return response()
 
