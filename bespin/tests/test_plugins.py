@@ -162,3 +162,7 @@ def test_user_installed_plugins():
     assert "BiggerPlugin" in response.body
     assert "EditablePlugin" in response.body
     
+    response = app.get("/plugin/script/MyPlugin/")
+    assert response.content_type == "text/javascript"
+    assert "someFunction" in response.body
+    

@@ -70,6 +70,7 @@ c.log_file = os.path.abspath("%s/../devserver.log" % os.path.dirname(__file__))
 c.default_quota = 15
 c.secure_cookie = True
 c.http_only_cookie = True
+c.current_domain_cookie = True
 c.template_path = [path(__file__).dirname().abspath()]
 
 c.base_url = "https://bespin.mozilla.com/"
@@ -191,7 +192,7 @@ def set_profile(profile):
         c.fslevels = 0
     elif profile == "dev":
         c.dburl = "sqlite:///%s" % (os.path.abspath("devdata.db"))
-        c.fsroot = os.path.abspath("%s/../../../devfiles"
+        c.fsroot = os.path.abspath("%s/../devfiles"
                         % os.path.dirname(__file__))
         root_log = logging.getLogger()
         root_log.setLevel(logging.DEBUG)
@@ -206,6 +207,8 @@ def set_profile(profile):
         # turn off the secure cookie, because localhost connections
         # will be HTTP
         c.secure_cookie = False
+        # turn off current_domain_cookie because of the development proxy setup
+        c.current_domain_cookie = False
         c.use_uuid_as_dir_identifier = False
         c.default_quota = 10000
         c.log_requests_to_stdout = True

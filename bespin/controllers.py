@@ -1125,10 +1125,12 @@ def _plugin_response(response, path=None):
 @expose(r'^/plugin/register/defaults$', 'GET', auth=False)
 def register_plugins(request, response):
     return _plugin_response(response)
-    
-@expose(r'^/plugin/register/user$', 'GET', auth=True)
-def register_user_plugins(request, response):
+
+def _get_user_plugin_path(request):
     user = request.user
+    if not user:
+        return []
+        
     project = get_project(user, user, "BespinSettings")
     
     pluginInfo = None
@@ -1148,6 +1150,11 @@ def register_user_plugins(request, response):
             path.extend(root / p for p in pi_path)
         
     path.append(project.location / "plugins")
+    return path
+    
+@expose(r'^/plugin/register/user$', 'GET', auth=True)
+def register_user_plugins(request, response):
+    path = _get_user_plugin_path(request)
     return _plugin_response(response, path)
 
 @expose(r'^/plugin/script/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
@@ -1158,7 +1165,10 @@ def load_script(request, response):
     if ".." in plugin_name or ".." in script_path:
         raise BadRequest("'..' not allowed in plugin or script names")
         
-    plugin = plugins.lookup_plugin(plugin_name)
+    path = _get_user_plugin_path(request)
+    path.extend(c.plugin_path)
+    
+    plugin = plugins.lookup_plugin(plugin_name, path)
     if not plugin:
         response.status = "404 Not Found"
         response.content_type = "text/plain"
@@ -1269,7 +1279,7 @@ def make_app():
     app = URLRelay(default=static_app)
     app = auth_tkt.AuthTKTMiddleware(app, c.secret, secure=c.secure_cookie, 
                 include_ip=False, httponly=c.http_only_cookie,
-                current_domain_cookie=True, wildcard_cookie=True)
+                current_domain_cookie=c.current_domain_cookie, wildcard_cookie=False)
     app = db_middleware(app)
     
     if c.log_requests_to_stdout:
