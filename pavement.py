@@ -67,11 +67,21 @@ bespin_mobwrite=bespin.mobwrite.mobwrite_web:start_server
 )
 
 @task
-@needs(['setuptools.command.develop'])
-def develop():
+def install_dependencies():
+    """Install the necessary Python packages."""
     sh("easy_install ext/pip-0.4.1.tar.gz")
     sh("pip install -r requirements.txt")
-    
+
+@task
+@needs(['setuptools.command.develop', 'install_dependencies'])
+def develop():
+    """After installing dependencies, creates schema for the development
+    database."""
+    from bespin.database import Base
+    import sqlalchemy
+    Base.metadata.create_all(sqlalchemy.create_engine('sqlite:///devdata.db'))
+    print "Populated devdata.db with initial schema"
+
 @task
 def start():
     """Starts the BespinServer on localhost port 8080 for development.
