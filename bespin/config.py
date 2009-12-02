@@ -220,7 +220,7 @@ def set_profile(profile):
         c.email_host = None
         c.vcs_timeout = -1
         
-        c.plugin_path = [path.getcwd() / ".." / "bespinclient" / "plugins" / "bespin-supported"]
+        c.plugin_path = [dict(name="supported", path=path.getcwd() / ".." / "bespinclient" / "plugins" / "bespin-supported")]
 
 def load_config(configfile):
     cp = ConfigParser.ConfigParser()

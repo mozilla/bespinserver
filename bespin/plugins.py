@@ -30,10 +30,12 @@ _metadata_declaration = re.compile("^[^=]*=\s*")
 _trailing_semi = re.compile(";*\s*$")
 
 class Plugin(object):
-    def __init__(self, name):
+    def __init__(self, name, location, path_entry):
         self.name = name
         self._errors = []
-        self.location = None
+        self.location = location
+        self.location_name = path_entry['name']
+        self.relative_location = self.location[path_entry.get("chop", 0)+1:]
     
     @property
     def errors(self):
@@ -122,7 +124,8 @@ def find_plugins(search_path=None):
         search_path = config.c.plugin_path
         
     result = []
-    for path in search_path:
+    for path_entry in search_path:
+        path = path_entry['path']
         for item in path.glob("*"):
             # plugins are directories with a plugin.json file or 
             # individual .js files.
@@ -136,9 +139,8 @@ def find_plugins(search_path=None):
             else:
                 continue
                 
-            plugin = Plugin(name)
+            plugin = Plugin(name, item, path_entry)
             result.append(plugin)
-            plugin.location = item
     return result
     
 def lookup_plugin(name, search_path=None):
@@ -146,13 +148,13 @@ def lookup_plugin(name, search_path=None):
     if search_path is None:
         search_path = config.c.plugin_path
         
-    for path in search_path:
+    for path_entry in search_path:
+        path = path_entry['path']
         location = path / name
         if not location.exists():
             location = path / (name + ".js")
         if location.exists():
-            plugin = Plugin(name)
-            plugin.location = location
+            plugin = Plugin(name, location, path_entry)
             return plugin
     
     return None

@@ -30,6 +30,7 @@ from datetime import date
 import socket
 import urllib
 from hashlib import sha256
+import re
 
 from urlrelay import URLRelay, register
 from paste.auth import auth_tkt
@@ -44,7 +45,7 @@ from bespin import vcs, deploy
 from bespin.database import User, get_project
 from bespin.filesystem import NotAuthorized, OverQuota, File, FileNotFound
 from bespin.utils import send_email_template
-from bespin import jsontemplate, filesystem, queue, plugins
+from bespin import filesystem, queue, plugins
 
 log = logging.getLogger("bespin.controllers")
 
@@ -1110,11 +1111,20 @@ def _plugin_response(response, path=None):
     for plugin in plugins.find_plugins(path):
         if not plugin.errors:
             name = plugin.name
-            scripts = [
-                {"url": "/server/plugin/script/%s/%s" % (name, scriptname),
-                "id": "%s:%s" % (name, scriptname)}
-                for scriptname in plugin.scripts
-            ]
+            
+            scripts = []
+            for scriptname in plugin.scripts:
+                if plugin.location_name == "user":
+                    url = "/server/getscript/file/at/%s%%3A%s" % (
+                        plugin.relative_location, scriptname)
+                else:
+                    url = "/server/plugin/script/%s/%s/%s" % (
+                        plugin.location_name, name, scriptname)
+                scripts.append(
+                    {"url": url,
+                    "id": "%s:%s" % (name, scriptname)}
+                )
+                
             item = {"depends": plugin.depends, "scripts": scripts}
             parts.append("""; tiki.register('%s', %s)""" % (name, simplejson.dumps(item)))
             metadata[name] = plugin.metadata
@@ -1147,9 +1157,11 @@ def _get_user_plugin_path(request):
         pi_path = pluginInfo.get("path", None)
         if pi_path:
             root = user.get_location()
-            path.extend(root / p for p in pi_path)
+            root_len = len(root)
+            path.extend(dict(name="user", path=root / p, chop=root_len) for p in pi_path)
         
-    path.append(project.location / "plugins")
+    path.append(dict(name="user", path=project.location / "plugins", 
+        chop=len(user.get_location())))
     return path
     
 @expose(r'^/plugin/register/user$', 'GET', auth=True)
@@ -1157,35 +1169,44 @@ def register_user_plugins(request, response):
     path = _get_user_plugin_path(request)
     return _plugin_response(response, path)
 
-@expose(r'^/plugin/script/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
+@expose(r'^/plugin/script/(?P<plugin_location>[^/]+)/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
 def load_script(request, response):
     response.content_type = "text/javascript"
     plugin_name = request.kwargs['plugin_name']
+    plugin_location = request.kwargs['plugin_location']
     script_path = request.kwargs['path']
-    if ".." in plugin_name or ".." in script_path:
+    if ".." in plugin_name or ".." in script_path or ".." in plugin_location:
         raise BadRequest("'..' not allowed in plugin or script names")
-        
-    path = _get_user_plugin_path(request)
-    path.extend(c.plugin_path)
     
-    plugin = plugins.lookup_plugin(plugin_name, path)
+    path = None
+    for path_entry in c.plugin_path:
+        if path_entry['name'] == plugin_location:
+            path = path_entry
+    
+    if path is None:
+        raise FileNotFound("Plugin location %s unknown" % (plugin_location))
+        
+    plugin = plugins.lookup_plugin(plugin_name, [path])
     if not plugin:
         response.status = "404 Not Found"
         response.content_type = "text/plain"
         response.body = "Plugin " + plugin_name + " does not exist"
         return response()
     
+    script_text = plugin.get_script_text(script_path)
+    response.body = _wrap_script(plugin_name, script_path, script_text)
+    return response()
+    
+def _wrap_script(plugin_name, script_path, script_text):
     if script_path:
         module_name = os.path.splitext(script_path)[0]
     else:
         module_name = "index"
         
-    script_text = plugin.get_script_text(script_path)
-    response.body = """; tiki.module('%s:%s', function(require, exports, module) {
+    return """; tiki.module('%s:%s', function(require, exports, module) {
 %s
 ;}); tiki.script('%s:%s');""" % (plugin_name, module_name, 
         script_text, plugin_name, script_path)
-    return response();
 
 
 def db_middleware(app):
@@ -1225,21 +1246,30 @@ def pathpopper_middleware(app, num_to_pop=1):
         return app(environ, start_response)
     return new_app
 
+_separate_plugin_name = re.compile("/([^/]+):")
+
 def scriptwrapper_middleware(app):
     def new_app(environ, start_response):
         req = Request(environ)
         if req.path_info.startswith("/getscript"):
+            if ":" not in req.path_info:
+                raise BadRequest(": delimiter required to separate plugin name from plugin file")
             req.path_info_pop()
+            url_leading, plugin_name, script_path = _separate_plugin_name.split(req.path_info)
+            if not script_path:
+                req.path_info = req.path_info[:-1]
+            else:
+                req.path_info = req.path_info.replace(":", "/")
+            plugin_name = plugin_name.replace(".js", "")
             process_script = True
         else:
             process_script = False
         result = req.get_response(app)
         if process_script and result.status.startswith("200"):
             contents = result.body
-            template = jsontemplate.FromFile(open(os.path.dirname(os.path.abspath(__file__)) + "/jsmodule.jsont"))
-            newbody = template.expand(dict(script=contents, 
-                                      script_name="/getscript" + req.path_info))
+            newbody = _wrap_script(plugin_name, script_path, contents)
             result.headers['Content-Length'] = str(len(newbody))
+            result.headers['Content-Type'] = "text/javascript"
             start_response(result.status, result.headers.items())
             return [newbody]
         start_response(result.status, result.headers.items())
