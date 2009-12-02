@@ -1178,7 +1178,7 @@ def load_script(request, response):
     if script_path:
         module_name = os.path.splitext(script_path)[0]
     else:
-        module_name = "package"
+        module_name = "index"
         
     script_text = plugin.get_script_text(script_path)
     response.body = """; tiki.module('%s:%s', function(require, exports, module) {
