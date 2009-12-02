@@ -71,16 +71,44 @@ def install_dependencies():
     """Install the necessary Python packages."""
     sh("easy_install ext/pip-0.4.1.tar.gz")
     sh("pip install -r requirements.txt")
+    
+@task
+def create_db():
+    """Creates the development database"""
+    from bespin import config, database, db_versions
+    from migrate.versioning.shell import main
+    
+    config.set_profile('dev')
+    
+    base_url = config.c.dburl
+    
+    config_file = options.server.config_file
+    if config_file.exists():
+        info("Loading config: %s", config_file)
+        code = compile(config_file.bytes(), config_file, "exec")
+        exec code in {}
+
+    if config.c.dburl == base_url and path("devdata.db").exists():
+        raise BuildFailure("Development database already exists")
+    
+    config.activate_profile()
+    dry("Create database tables", database.Base.metadata.create_all, bind=config.c.dbengine)
+    
+    repository = str(path(db_versions.__file__).dirname())
+    dburl = config.c.dburl
+    dry("Turn on migrate versioning", main, ["version_control", dburl, repository])
+
 
 @task
 @needs(['setuptools.command.develop', 'install_dependencies'])
 def develop():
     """After installing dependencies, creates schema for the development
     database."""
-    from bespin.database import Base
-    import sqlalchemy
-    Base.metadata.create_all(sqlalchemy.create_engine('sqlite:///devdata.db'))
-    info("Populated devdata.db with initial schema")
+    info("""The software is now installed. If this is your first time, you will probably
+also want to create your development database with this command:
+
+paver create_db
+""")
 
 @task
 def start():
