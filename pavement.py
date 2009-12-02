@@ -80,7 +80,7 @@ def develop():
     from bespin.database import Base
     import sqlalchemy
     Base.metadata.create_all(sqlalchemy.create_engine('sqlite:///devdata.db'))
-    print "Populated devdata.db with initial schema"
+    info("Populated devdata.db with initial schema")
 
 @task
 def start():
