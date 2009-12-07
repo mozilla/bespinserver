@@ -59,6 +59,7 @@ class Plugin(object):
                 if not md_path.exists():
                     md = {}
                     self._errors = ["Plugin metadata file (plugin.json) file is missing"]
+                    md_text = '""'
                 else:
                     md_text = md_path.text()
             else:
@@ -154,6 +155,10 @@ def lookup_plugin(name, search_path=None):
         if not location.exists():
             location = path / (name + ".js")
         if location.exists():
+            if location.isdir():
+                mdfile = location / "plugin.json"
+                if not mdfile.exists():
+                    continue
             plugin = Plugin(name, location, path_entry)
             return plugin
     

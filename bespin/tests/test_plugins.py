@@ -184,8 +184,10 @@ def test_user_installed_plugins():
     assert "tiki.script('BiggerPlugin:somedir/script.js')" in response.body
     
     
-# def test_plugin_reload():
-#     _init_data()
-#     response = app.get("/plugin/reload/plugin1")
-#     print response.body
-#     assert 'depends:{["plugin2"]}' in response.body
+def test_plugin_reload():
+    _init_data()
+    response = app.get("/plugin/reload/plugin2")
+    print response.body
+    assert '"plugin2": {}' in response.body
+    assert '"depends": ["plugin2"]' in response.body
+    

@@ -1103,12 +1103,16 @@ def run_deploy(request, response):
         taskname="deploy %s" % (project_name)))
     return response()
     
-def _plugin_response(response, path=None):
+def _plugin_response(response, path=None, plugin_list=None):
     response.content_type = "text/javascript"
     
     parts = []
     metadata = dict()
-    for plugin in plugins.find_plugins(path):
+    
+    if plugin_list is None:
+        plugin_list = plugins.find_plugins(path)
+    
+    for plugin in plugin_list:
         if not plugin.errors:
             name = plugin.name
             
@@ -1196,6 +1200,61 @@ def load_script(request, response):
     script_text = plugin.get_script_text(script_path)
     response.body = _wrap_script(plugin_name, script_path, script_text)
     return response()
+
+@expose(r'^/plugin/reload/(?P<plugin_name>.+)', 'GET')
+def reload_plugin(request, response):
+    response.content_type = "text/javascript"
+    plugin_name = request.kwargs['plugin_name']
+    if ".." in plugin_name:
+        raise BadRequest("'..' not allowed in plugin names")
+    path = _get_user_plugin_path(request)
+    path.extend(c.plugin_path)
+    
+    # build reverse dependency data
+    # note that this looks expensive and is a likely cache target.
+    all_plugins = plugins.find_plugins(path)
+    all_plugins = dict((p.name, p) for p in all_plugins)
+    for pname, plugin in all_plugins.items():
+        for dep in plugin.metadata.get("depends", []):
+            try:
+                required_plugin = all_plugins[dep]
+            except KeyError:
+                response.status = "404 Not Found"
+                response.content_type = "text/plain"
+                response.body = "Plugin " + dep + " required by " + pname \
+                    + "does not exist"
+                return response()
+            
+            try:
+                dependents = required_plugin.dependents
+            except AttributeError:
+                dependents = set()
+                required_plugin.dependents = dependents
+            
+            dependents.add(pname)
+            
+    
+    seen = set()
+    plugin_list = []
+    def gather_dependencies(plugin_name):
+        try:
+            plugin = all_plugins[plugin_name]
+        except KeyError:
+            response.status = "404 Not Found"
+            response.content_type = "text/plain"
+            response.body = "Plugin " + plugin_name + " does not exist"
+            return response()
+            
+        seen.add(plugin_name)
+        plugin_list.append(plugin)
+        for dep in getattr(plugin, 'dependents', set()):
+            if dep in seen:
+                continue
+            gather_dependencies(dep)
+    
+    gather_dependencies(plugin_name)
+    
+    return _plugin_response(response, plugin_list=plugin_list)
     
 def _wrap_script(plugin_name, script_path, script_text):
     if script_path:
