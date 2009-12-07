@@ -1210,51 +1210,9 @@ def reload_plugin(request, response):
     path = _get_user_plugin_path(request)
     path.extend(c.plugin_path)
     
-    # build reverse dependency data
-    # note that this looks expensive and is a likely cache target.
-    all_plugins = plugins.find_plugins(path)
-    all_plugins = dict((p.name, p) for p in all_plugins)
-    for pname, plugin in all_plugins.items():
-        for dep in plugin.metadata.get("depends", []):
-            try:
-                required_plugin = all_plugins[dep]
-            except KeyError:
-                response.status = "404 Not Found"
-                response.content_type = "text/plain"
-                response.body = "Plugin " + dep + " required by " + pname \
-                    + "does not exist"
-                return response()
-            
-            try:
-                dependents = required_plugin.dependents
-            except AttributeError:
-                dependents = set()
-                required_plugin.dependents = dependents
-            
-            dependents.add(pname)
-            
+    plugin = plugins.lookup_plugin(plugin_name, path)
     
-    seen = set()
-    plugin_list = []
-    def gather_dependencies(plugin_name):
-        try:
-            plugin = all_plugins[plugin_name]
-        except KeyError:
-            response.status = "404 Not Found"
-            response.content_type = "text/plain"
-            response.body = "Plugin " + plugin_name + " does not exist"
-            return response()
-            
-        seen.add(plugin_name)
-        plugin_list.append(plugin)
-        for dep in getattr(plugin, 'dependents', set()):
-            if dep in seen:
-                continue
-            gather_dependencies(dep)
-    
-    gather_dependencies(plugin_name)
-    
-    return _plugin_response(response, plugin_list=plugin_list)
+    return _plugin_response(response, plugin_list=[plugin])
     
 def _wrap_script(plugin_name, script_path, script_text):
     if script_path:

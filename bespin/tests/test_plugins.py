@@ -189,5 +189,6 @@ def test_plugin_reload():
     response = app.get("/plugin/reload/plugin2")
     print response.body
     assert '"plugin2": {}' in response.body
-    assert '"depends": ["plugin2"]' in response.body
+    # just need the plugin, not its dependents
+    assert '"depends": ["plugin2"]' not in response.body
     
