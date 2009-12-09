@@ -91,7 +91,7 @@ class Plugin(object):
             self._metadata = md
             return md
 
-    def _putFilesInAttribute(self, attribute, glob):
+    def _putFilesInAttribute(self, attribute, glob, allowEmpty=True):
         """Finds all of the plugin files matching the given glob
         and puts them in the attribute given. If the
         attribute is already set, it is returned directly."""
@@ -102,7 +102,7 @@ class Plugin(object):
             if loc.isdir():
                 l = [loc.relpathto(f) for f in self.location.walkfiles(glob)]
             else:
-                l = [""]
+                l = [] if allowEmpty else [""]
             setattr(self, attribute, l)
             return l
         
@@ -113,7 +113,8 @@ class Plugin(object):
     
     @property
     def scripts(self):
-        return self._putFilesInAttribute("_scripts", "*.js")
+        return self._putFilesInAttribute("_scripts", "*.js", 
+            allowEmpty=False)
     
     def get_script_text(self, scriptname):
         """Look up the script at scriptname within this plugin."""

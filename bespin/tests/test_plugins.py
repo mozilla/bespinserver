@@ -108,6 +108,11 @@ def test_plugin_metadata():
 def test_plugin_stylesheets():
     plugin = plugins.lookup_plugin("plugin1")
     assert plugin.stylesheets == ["resources/foo/foo.css"]
+    plugin = plugins.lookup_plugin("plugin2")
+    assert plugin.stylesheets == []
+    plugin = plugins.lookup_plugin("SingleFilePlugin1")
+    assert plugin.stylesheets == []
+    
 
 def test_lookup_plugin():
     plugin = plugins.lookup_plugin("DOES NOT EXIST")
