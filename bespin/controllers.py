@@ -37,6 +37,7 @@ from paste.auth import auth_tkt
 from paste.proxy import Proxy
 import simplejson
 import tempfile
+import static
 from webob import Request, Response
 
 from bespin.config import c
@@ -1128,8 +1129,19 @@ def _plugin_response(response, path=None, plugin_list=None):
                     {"url": url,
                     "id": "%s:%s" % (name, scriptname)}
                 )
+            
+            stylesheets = []
+            for stylesheet in plugin.stylesheets:
+                if plugin.location_name == "user":
+                    url = "/server/file/at/%s%%3A%s" % (
+                        plugin.relative_location, stylesheet)
+                else:
+                    url = "/server/plugin/file/%s/%s/%s" % (
+                        plugin.location_name, name, stylesheet)
+                stylesheets.append(url)
                 
-            item = {"depends": plugin.depends, "scripts": scripts}
+            item = {"depends": plugin.depends, "scripts": scripts,
+                "stylesheets": stylesheets}
             parts.append("""; tiki.register('%s', %s)""" % (name, simplejson.dumps(item)))
             metadata[name] = plugin.metadata
     parts.append("""; tiki.require("bespin:plugins").catalog.load(%s);""" % simplejson.dumps(metadata))
@@ -1200,6 +1212,34 @@ def load_script(request, response):
     script_text = plugin.get_script_text(script_path)
     response.body = _wrap_script(plugin_name, script_path, script_text)
     return response()
+    
+@expose(r'^/plugin/file/(?P<plugin_location>[^/]+)/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
+def load_file(request, response):
+    plugin_name = request.kwargs['plugin_name']
+    plugin_location = request.kwargs['plugin_location']
+    script_path = request.kwargs['path']
+    if ".." in plugin_name or ".." in script_path or ".." in plugin_location:
+        raise BadRequest("'..' not allowed in plugin or script names")
+    
+    path = None
+    for path_entry in c.plugin_path:
+        if path_entry['name'] == plugin_location:
+            path = path_entry
+    
+    if path is None:
+        raise FileNotFound("Plugin location %s unknown" % (plugin_location))
+        
+    plugin = plugins.lookup_plugin(plugin_name, [path])
+    if not plugin:
+        response.status = "404 Not Found"
+        response.content_type = "text/plain"
+        response.body = "Plugin " + plugin_name + " does not exist"
+        return response()
+    
+    # use the static package to actually serve the file
+    newapp = static.Cling(plugin.location)
+    request.path_info = "/" + "/".join(request.path_info.split("/")[5:])
+    return newapp(request.environ, response.start_response)
 
 @expose(r'^/plugin/reload/(?P<plugin_name>.+)', 'GET')
 def reload_plugin(request, response):
@@ -1303,7 +1343,6 @@ class URLRelayCompatibleProxy(Proxy):
 
 def make_app():
     from webob import Response
-    import static
     static_app = static.Cling(c.static_dir)
     if c.static_override:
         from paste.cascade import Cascade

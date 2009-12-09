@@ -48,7 +48,7 @@ class Plugin(object):
         if md:
             return md.get('depends', [])
         return []
-    
+        
     @property
     def metadata(self):
         try:
@@ -90,19 +90,30 @@ class Plugin(object):
                 
             self._metadata = md
             return md
-            
-    @property
-    def scripts(self):
+
+    def _putFilesInAttribute(self, attribute, glob):
+        """Finds all of the plugin files matching the given glob
+        and puts them in the attribute given. If the
+        attribute is already set, it is returned directly."""
         try:
-            return self._scripts
+            return getattr(self, attribute)
         except AttributeError:
             loc = self.location
             if loc.isdir():
-                scripts = [loc.relpathto(f) for f in self.location.walkfiles("*.js")]
+                l = [loc.relpathto(f) for f in self.location.walkfiles(glob)]
             else:
-                scripts = [""]
-            self._scripts = scripts
-            return scripts
+                l = [""]
+            setattr(self, attribute, l)
+            return l
+        
+    
+    @property
+    def stylesheets(self):
+        return self._putFilesInAttribute("_stylesheets", "*.css")
+    
+    @property
+    def scripts(self):
+        return self._putFilesInAttribute("_scripts", "*.js")
     
     def get_script_text(self, scriptname):
         """Look up the script at scriptname within this plugin."""

@@ -60,13 +60,13 @@ class BespinRequest(Request):
         return None
 
 class BespinResponse(Response):
-    def __init__(self, environ, start_request, **kw):
+    def __init__(self, environ, start_response, **kw):
         super(BespinResponse, self).__init__(**kw)
         self.environ = environ
-        self.start_request = start_request
+        self.start_response = start_response
 
     def __call__(self):
-        return super(BespinResponse, self).__call__(self.environ, self.start_request)
+        return super(BespinResponse, self).__call__(self.environ, self.start_response)
 
     def error(self, status, e):
         self.status = status

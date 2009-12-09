@@ -105,6 +105,10 @@ def test_plugin_metadata():
     errors = p.errors
     assert errors
 
+def test_plugin_stylesheets():
+    plugin = plugins.lookup_plugin("plugin1")
+    assert plugin.stylesheets == ["resources/foo/foo.css"]
+
 def test_lookup_plugin():
     plugin = plugins.lookup_plugin("DOES NOT EXIST")
     assert plugin is None
@@ -121,6 +125,7 @@ def test_default_plugin_registration():
     assert response.content_type == "text/javascript"
     assert "plugin1" in response.body
     assert "plugin/script/testplugins/plugin1/thecode.js" in response.body
+    assert "plugin/file/testplugins/plugin1/resources/foo/foo.css" in response.body
     assert "NOT THERE" not in response.body
     assert "plugin3" not in response.body
     
@@ -140,6 +145,12 @@ def test_get_single_file_script():
     assert content_type == "text/javascript"
     assert "exports.someFunction" in response.body
     assert "SingleFilePlugin1:index" in response.body
+    
+def test_get_stylesheet():
+    response = app.get("/plugin/file/testplugins/plugin1/resources/foo/foo.css")
+    content_type = response.content_type
+    assert content_type == "text/css"
+    assert "body {}" in response.body
     
     
 def test_bad_script_request():
