@@ -106,6 +106,8 @@ class Plugin(object):
                 md = {}
                 
             server_base_url = config.c.server_base_url
+            if not server_base_url.startswith("/"):
+                server_base_url = "/" + server_base_url
             name = self.name
             
             if self.location_name == "user":
