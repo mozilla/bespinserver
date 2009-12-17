@@ -73,7 +73,22 @@ def test_plugin_metadata_parsing():
 
 More code here...
 
-""", dict(foo="bar")]
+""", dict(foo="bar")],
+        ["""
+        'define metadata'   ;  
+        ({"bar":
+            "baz"}
+        );
+    "end";
+""", dict(bar="baz")],
+        ["""
+""", None],
+        ["""
+"define metadata";
+({});
+
+// there is no end
+""", None]
     ]
     
     def run_one(input, expected):
@@ -87,7 +102,7 @@ More code here...
             assert parsed == expected
     
     for test in tests:
-        run_one(*test)
+        yield run_one, test[0], test[1]
 
 def test_plugin_metadata():
     plugin_list = list(plugins.find_plugins())
