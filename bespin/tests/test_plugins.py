@@ -23,6 +23,8 @@
 
 from path import path
 
+from simplejson import loads
+
 from bespin import config, plugins, controllers
 from bespin.database import User, Base
 
@@ -61,6 +63,31 @@ def _init_data():
         
     macgyver = User.find_user("MacGyver")
 
+def test_plugin_metadata_parsing():
+    tests = [
+        ["""
+
+"define metadata";
+({"foo": "bar"});
+"end";
+
+More code here...
+
+""", dict(foo="bar")]
+    ]
+    
+    def run_one(input, expected):
+        md_text = plugins._parse_md_text(input.split("\n"))
+        print md_text
+        if expected is None:
+            assert md_text is None
+        else:
+            assert md_text
+            parsed = loads(md_text)
+            assert parsed == expected
+    
+    for test in tests:
+        run_one(*test)
 
 def test_plugin_metadata():
     plugin_list = list(plugins.find_plugins())

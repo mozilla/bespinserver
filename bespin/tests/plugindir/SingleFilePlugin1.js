@@ -1,6 +1,6 @@
-// ---plugin.json---
-var metadata = {};
-// ---
+"define metadata";
+({});
+"end";
 
 exports.someFunction = function() {
     

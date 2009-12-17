@@ -28,6 +28,34 @@ from bespin import config
 
 _metadata_declaration = re.compile("^[^=]*=\s*")
 _trailing_semi = re.compile(";*\s*$")
+_leading_paren = re.compile(r"^\s*\(\s*")
+_trailing_paren = re.compile(r"\s*\)\s*$")
+_start_tag = re.compile(r'^\s*[\'"]define\s+metadata[\'"]\s*;*\s*$')
+_end_tag = re.compile(r'^\s*[\'"]end[\'"]\s*;*\s*$')
+
+
+def _parse_md_text(lines):
+    """Parses the plugin metadata out of the lines of the JS file.
+    """
+    start = -1
+    end = -1
+    for i in xrange(0, len(lines)):
+        if _start_tag.match(lines[i]):
+            start = i
+        elif _end_tag.match(lines[i]):
+            end = i
+            break
+    
+    if start == -1 or end == -1:
+        return None
+    
+    md_text = "\n".join(lines[start+1:end])
+    md_text = _metadata_declaration.sub("", md_text)
+    md_text = _trailing_semi.sub("", md_text)
+    md_text = _leading_paren.sub("", md_text)
+    md_text = _trailing_paren.sub("", md_text)
+    return md_text
+    
 
 class Plugin(object):
     def __init__(self, name, location, path_entry):
@@ -64,24 +92,13 @@ class Plugin(object):
                     md_text = md_path.text()
             else:
                 lines = self.location.lines()
-                start = -1
-                end = -1
-                for i in xrange(0, len(lines)):
-                    if "// ---plugin.json---" in lines[i]:
-                        start = i
-                    elif "// ---" in lines[i]:
-                        end = i
-                        break
+                md_text = _parse_md_text(lines)
                 
-                if start == -1 or end == -1:
+                if not md_text:
                     self._errors = ["Plugin metadata is missing or badly formatted."]
                     self._metadata = {}
                     return self._metadata
                     
-                md_text = "\n".join(lines[start+1:end])
-                md_text = _metadata_declaration.sub("", md_text)
-                md_text = _trailing_semi.sub("", md_text)
-                
             try:
                 md = loads(md_text)
             except Exception, e:

@@ -1138,7 +1138,10 @@ def _plugin_response(response, path=None, plugin_list=None):
                 else:
                     url = "/server/plugin/file/%s/%s/%s" % (
                         plugin.location_name, name, stylesheet)
-                stylesheets.append(url)
+                stylesheets.append(
+                    {"url": url,
+                    "id": "%s:%s" % (name, stylesheet)}
+                )
                 
             item = {"depends": plugin.depends, "scripts": scripts,
                 "stylesheets": stylesheets}
@@ -1260,8 +1263,7 @@ def _wrap_script(plugin_name, script_path, script_text):
     else:
         module_name = "index"
         
-    return """; tiki.module('%s:%s', function(require, exports, module) {
-%s
+    return """; tiki.module('%s:%s', function(require, exports, module) {%s
 ;}); tiki.script('%s:%s');""" % (plugin_name, module_name, 
         script_text, plugin_name, script_path)
 
