@@ -88,7 +88,14 @@ More code here...
 ({});
 
 // there is no end
-""", None]
+""", None],
+        ["""
+"define metadata";
+var metadata = {"foo": 1};
+"end";
+
+
+""", dict(foo=1)]
     ]
     
     def run_one(input, expected):
