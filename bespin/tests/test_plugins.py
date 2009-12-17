@@ -176,7 +176,7 @@ def test_lookup_plugin():
 
 def test_default_plugin_registration():
     response = app.get("/plugin/register/defaults")
-    assert response.content_type == "text/javascript"
+    assert response.content_type == "application/json"
     assert "plugin1" in response.body
     assert "plugin/script/testplugins/plugin1/thecode.js" in response.body
     assert "plugin/file/testplugins/plugin1/resources/foo/foo.css" in response.body
@@ -221,7 +221,7 @@ def test_user_installed_plugins():
     response = app.put("/file/at/BespinSettings/plugins/BiggerPlugin/somedir/script.js", 
         "exports.foo = 1;\n")
     response = app.get("/plugin/register/user")
-    assert response.content_type == "text/javascript"
+    assert response.content_type == "application/json"
     assert "MyPlugin" in response.body
     assert "BiggerPlugin" in response.body
     assert "file/at/BespinSettings/plugins/MyPlugin.js%3A" in response.body
@@ -234,7 +234,7 @@ def test_user_installed_plugins():
 "pluginOrdering": ["EditablePlugin"]
 }""")
     response = app.get("/plugin/register/user")
-    assert response.content_type == "text/javascript"
+    assert response.content_type == "application/json"
     assert "MyPlugin" in response.body
     assert "BiggerPlugin" in response.body
     assert "EditablePlugin" in response.body
@@ -253,7 +253,7 @@ def test_plugin_reload():
     _init_data()
     response = app.get("/plugin/reload/plugin2")
     print response.body
-    assert '"plugin2": {}' in response.body
+    assert '"plugin2": {' in response.body
     # just need the plugin, not its dependents
     assert '"depends": ["plugin2"]' not in response.body
     

@@ -74,6 +74,7 @@ c.current_domain_cookie = True
 c.template_path = [path(__file__).dirname().abspath()]
 
 c.base_url = "https://bespin.mozilla.com/"
+c.server_base_url = "server/"
 
 # Settings for sending email
 c.email_from = "invalid@ThisIsNotAValidEmailAddressUseSomethingElse.com"
@@ -238,6 +239,9 @@ def load_pyconfig(configfile):
     print(c.fsroot)
 
 def activate_profile():
+    if c.server_base_url and not c.server_base_url.endswith("/"):
+        c.server_base_url += "/"
+        
     for ep in pkg_resources.iter_entry_points("bespin_extensions"):
         ep.load()
 

@@ -105,6 +105,40 @@ class Plugin(object):
                 self._errors = ["Problem with metadata JSON: %s" % (e)]
                 md = {}
                 
+            server_base_url = config.c.server_base_url
+            name = self.name
+            
+            if self.location_name == "user":
+                md['scripts'] = [
+                    dict(url="%sgetscript/file/at/%s%%3A%s" % (
+                        server_base_url, self.relative_location, 
+                        scriptname),
+                        id="%s:%s" % (name, scriptname))
+                        for scriptname in self.scripts
+                    ]
+                md['stylesheets'] = [
+                    dict(url="%sfile/at/%s%%3A%s" % (
+                        server_base_url, self.relative_location, 
+                        stylesheet),
+                        id="%s:%s" % (name, stylesheet))
+                    for stylesheet in self.stylesheets
+                ]
+            else:
+                md['scripts'] = [
+                    dict(url="%splugin/script/%s/%s/%s" % (
+                        server_base_url, self.location_name, 
+                        name, scriptname),
+                        id="%s:%s" % (name, scriptname))
+                        for scriptname in self.scripts
+                    ]
+                md['stylesheets'] = [
+                    dict(url="%splugin/file/%s/%s/%s" % (
+                        server_base_url, self.location_name, name, 
+                        stylesheet),
+                        id="%s:%s" % (name, stylesheet))
+                    for stylesheet in self.stylesheets
+                ]
+            
             self._metadata = md
             return md
 

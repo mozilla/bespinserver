@@ -1105,50 +1105,16 @@ def run_deploy(request, response):
     return response()
     
 def _plugin_response(response, path=None, plugin_list=None):
-    response.content_type = "text/javascript"
+    response.content_type = "application/json"
     
-    parts = []
-    metadata = dict()
     
     if plugin_list is None:
         plugin_list = plugins.find_plugins(path)
+
+    metadata = dict((plugin.name, plugin.metadata) 
+        for plugin in plugin_list if not plugin.errors)
     
-    for plugin in plugin_list:
-        if not plugin.errors:
-            name = plugin.name
-            
-            scripts = []
-            for scriptname in plugin.scripts:
-                if plugin.location_name == "user":
-                    url = "/server/getscript/file/at/%s%%3A%s" % (
-                        plugin.relative_location, scriptname)
-                else:
-                    url = "/server/plugin/script/%s/%s/%s" % (
-                        plugin.location_name, name, scriptname)
-                scripts.append(
-                    {"url": url,
-                    "id": "%s:%s" % (name, scriptname)}
-                )
-            
-            stylesheets = []
-            for stylesheet in plugin.stylesheets:
-                if plugin.location_name == "user":
-                    url = "/server/file/at/%s%%3A%s" % (
-                        plugin.relative_location, stylesheet)
-                else:
-                    url = "/server/plugin/file/%s/%s/%s" % (
-                        plugin.location_name, name, stylesheet)
-                stylesheets.append(
-                    {"url": url,
-                    "id": "%s:%s" % (name, stylesheet)}
-                )
-                
-            item = {"depends": plugin.depends, "scripts": scripts,
-                "stylesheets": stylesheets}
-            parts.append("""; tiki.register('%s', %s)""" % (name, simplejson.dumps(item)))
-            metadata[name] = plugin.metadata
-    parts.append("""; tiki.require("bespin:plugins").catalog.load(%s);""" % simplejson.dumps(metadata))
-    response.body = "\n".join(parts)
+    response.body = simplejson.dumps(metadata)
     return response()
 
 @expose(r'^/plugin/register/defaults$', 'GET', auth=False)
