@@ -1154,6 +1154,13 @@ def register_user_plugins(request, response):
     path = _get_user_plugin_path(request)
     return _plugin_response(response, path)
 
+@expose(r'^/plugin/register/tests$', 'GET')
+def register_test_plugins(request, response):
+    if "test_plugin_path" not in c:
+        raise FileNotFound("Test plugins are only in development environment")
+    return _plugin_response(response, c.test_plugin_path)
+
+
 @expose(r'^/plugin/script/(?P<plugin_location>[^/]+)/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
 def load_script(request, response):
     response.content_type = "text/javascript"
