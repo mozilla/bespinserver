@@ -141,6 +141,9 @@ class Plugin(object):
                     for stylesheet in self.stylesheets
                 ]
             
+            md['reloadURL'] = "%splugin/reload/%s" % (
+                server_base_url, name)
+            
             if self._errors:
                 md['errors'] = self._errors
             self._metadata = md
