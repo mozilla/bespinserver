@@ -1112,7 +1112,7 @@ def _plugin_response(response, path=None, plugin_list=None):
         plugin_list = plugins.find_plugins(path)
 
     metadata = dict((plugin.name, plugin.metadata) 
-        for plugin in plugin_list if not plugin.errors)
+        for plugin in plugin_list)
     
     response.body = simplejson.dumps(metadata)
     return response()

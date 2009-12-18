@@ -96,7 +96,7 @@ class Plugin(object):
                 
                 if not md_text:
                     self._errors = ["Plugin metadata is missing or badly formatted."]
-                    self._metadata = {}
+                    self._metadata = {"errors": self._errors}
                     return self._metadata
                     
             try:
@@ -141,6 +141,7 @@ class Plugin(object):
                     for stylesheet in self.stylesheets
                 ]
             
+            md['errors'] = self._errors
             self._metadata = md
             return md
 

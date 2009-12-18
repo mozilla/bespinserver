@@ -181,7 +181,10 @@ def test_default_plugin_registration():
     assert "plugin/script/testplugins/plugin1/thecode.js" in response.body
     assert "plugin/file/testplugins/plugin1/resources/foo/foo.css" in response.body
     assert "NOT THERE" not in response.body
-    assert "plugin3" not in response.body
+    data = loads(response.body)
+    assert "plugin3" in data
+    md = data['plugin3']
+    assert "errors" in md
     
 def test_get_script_from_plugin():
     response = app.get("/plugin/script/testplugins/plugin1/thecode.js")
