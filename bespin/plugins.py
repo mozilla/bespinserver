@@ -141,7 +141,8 @@ class Plugin(object):
                     for stylesheet in self.stylesheets
                 ]
             
-            md['errors'] = self._errors
+            if self._errors:
+                md['errors'] = self._errors
             self._metadata = md
             return md
 

@@ -182,6 +182,8 @@ def test_default_plugin_registration():
     assert "plugin/file/testplugins/plugin1/resources/foo/foo.css" in response.body
     assert "NOT THERE" not in response.body
     data = loads(response.body)
+    md = data["plugin1"]
+    assert "errors" not in md
     assert "plugin3" in data
     md = data['plugin3']
     assert "errors" in md
