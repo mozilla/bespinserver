@@ -1154,7 +1154,7 @@ def register_user_plugins(request, response):
     path = _get_user_plugin_path(request)
     return _plugin_response(response, path)
 
-@expose(r'^/plugin/register/tests$', 'GET')
+@expose(r'^/plugin/register/tests$', 'GET', auth=False)
 def register_test_plugins(request, response):
     if "test_plugin_path" not in c:
         raise FileNotFound("Test plugins are only in development environment")
@@ -1217,13 +1217,16 @@ def load_file(request, response):
     request.path_info = "/" + "/".join(request.path_info.split("/")[5:])
     return newapp(request.environ, response.start_response)
 
-@expose(r'^/plugin/reload/(?P<plugin_name>.+)', 'GET')
+@expose(r'^/plugin/reload/(?P<plugin_name>.+)', 'GET', auth=False)
 def reload_plugin(request, response):
     response.content_type = "text/javascript"
     plugin_name = request.kwargs['plugin_name']
     if ".." in plugin_name:
         raise BadRequest("'..' not allowed in plugin names")
-    path = _get_user_plugin_path(request)
+    if request.user:
+        path = _get_user_plugin_path(request)
+    else:
+        path = []
     path.extend(c.plugin_path)
     
     plugin = plugins.lookup_plugin(plugin_name, path)
