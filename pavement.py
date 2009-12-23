@@ -41,6 +41,7 @@ setuputils.install_distutils_tasks()
 execfile(os.path.join('bespin', '__init__.py'))
 
 options(
+    staticdir="",
     setup=Bunch(
         name="BespinServer",
         version=VERSION,
@@ -129,7 +130,8 @@ def start():
     
     config.set_profile('dev')
     
-    config.c.static_dir = path(options.clientdir) / "src" / "html"
+    if options.staticdir:
+        config.c.static_dir = path(options.clientdir) / options.staticdir
     
     if options.server.dburl:
         config.c.dburl = options.server.dburl

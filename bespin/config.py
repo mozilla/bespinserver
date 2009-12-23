@@ -59,7 +59,7 @@ c.db_pool_size = 10
 c.db_pool_overflow = 10
 c.secret = "This is the phrase that is used for secret stuff."
 c.pw_secret = "This phrase encrypts passwords."
-c.static_dir = path(os.path.abspath("%s/../../../frontend" % os.path.dirname(__file__)))
+c.static_dir = path.getcwd() / ".." / "bespinclient" / "tmp" / "static"
 
 c.plugin_path = []
 
