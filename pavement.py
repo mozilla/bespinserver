@@ -42,6 +42,7 @@ execfile(os.path.join('bespin', '__init__.py'))
 
 options(
     staticdir="",
+    server_base_url="/",
     setup=Bunch(
         name="BespinServer",
         version=VERSION,
@@ -138,6 +139,8 @@ def start():
     
     if options.server.async:
         config.c.async_jobs = True
+    
+    config.c.server_base_url = options.server_base_url
     
     config_file = options.server.config_file
     if config_file.exists():
