@@ -20,172 +20,58 @@
 # 
 # ***** END LICENSE BLOCK *****
 # 
-import re
 
-from simplejson import loads
+from bespinbuild.plugins import (Plugin as BasePlugin,
+                                 find_plugins as base_find_plugins,
+                                 lookup_plugin as base_lookup_plugin)
 
-from bespin import config
+from bespin import config    
 
-_metadata_declaration = re.compile("^[^=]*=\s*")
-_trailing_semi = re.compile(";*\s*$")
-_leading_paren = re.compile(r"^\s*\(\s*")
-_trailing_paren = re.compile(r"\s*\)\s*$")
-_start_tag = re.compile(r'^\s*[\'"]define\s+metadata[\'"]\s*;*\s*$')
-_end_tag = re.compile(r'^\s*[\'"]end[\'"]\s*;*\s*$')
-
-
-def _parse_md_text(lines):
-    """Parses the plugin metadata out of the lines of the JS file.
-    """
-    start = -1
-    end = -1
-    for i in xrange(0, len(lines)):
-        if _start_tag.match(lines[i]):
-            start = i
-        elif _end_tag.match(lines[i]):
-            end = i
-            break
-    
-    if start == -1 or end == -1:
-        return None
-    
-    md_text = "\n".join(lines[start+1:end])
-    md_text = _metadata_declaration.sub("", md_text)
-    md_text = _trailing_semi.sub("", md_text)
-    md_text = _leading_paren.sub("", md_text)
-    md_text = _trailing_paren.sub("", md_text)
-    return md_text
-    
-
-class Plugin(object):
-    def __init__(self, name, location, path_entry):
-        self.name = name
-        self._errors = []
-        self.location = location
-        self.location_name = path_entry['name']
-        self.relative_location = self.location[path_entry.get("chop", 0)+1:]
-    
-    @property
-    def errors(self):
-        md = self.metadata
-        return self._errors
-    
-    @property
-    def depends(self):
-        md = self.metadata
-        if md:
-            return md.get('depends', [])
-        return []
+class Plugin(BasePlugin):
+    def load_metadata(self):
+        print "loading metadata for %s from %s" % (self.name, self.location)
+        md = super(Plugin, self).load_metadata()
         
-    @property
-    def metadata(self):
-        try:
-            return self._metadata
-        except AttributeError:
-            if self.location.isdir():
-                md_path = self.location / "plugin.json"
-                if not md_path.exists():
-                    md = {}
-                    self._errors = ["Plugin metadata file (plugin.json) file is missing"]
-                    md_text = '""'
-                else:
-                    md_text = md_path.text()
-            else:
-                lines = self.location.lines()
-                md_text = _parse_md_text(lines)
-                
-                if not md_text:
-                    self._errors = ["Plugin metadata is missing or badly formatted."]
-                    self._metadata = {"errors": self._errors}
-                    return self._metadata
-                    
-            try:
-                md = loads(md_text)
-            except Exception, e:
-                self._errors = ["Problem with metadata JSON: %s" % (e)]
-                md = {}
-                
-            server_base_url = config.c.server_base_url
-            if not server_base_url.startswith("/"):
-                server_base_url = "/" + server_base_url
-            name = self.name
-            
-            if self.location_name == "user":
-                md['scripts'] = [
-                    dict(url="%sgetscript/file/at/%s%%3A%s" % (
-                        server_base_url, self.relative_location, 
-                        scriptname),
-                        id="%s:%s" % (name, scriptname))
-                        for scriptname in self.scripts
-                    ]
-                md['stylesheets'] = [
-                    dict(url="%sfile/at/%s%%3A%s" % (
-                        server_base_url, self.relative_location, 
-                        stylesheet),
-                        id="%s:%s" % (name, stylesheet))
-                    for stylesheet in self.stylesheets
+        server_base_url = config.c.server_base_url
+        if not server_base_url.startswith("/"):
+            server_base_url = "/" + server_base_url
+        name = self.name
+        
+        if self.location_name == "user":
+            md['scripts'] = [
+                dict(url="%sgetscript/file/at/%s%%3A%s" % (
+                    server_base_url, self.relative_location, 
+                    scriptname),
+                    id="%s:%s" % (name, scriptname))
+                    for scriptname in self.scripts
                 ]
-            else:
-                md['scripts'] = [
-                    dict(url="%splugin/script/%s/%s/%s" % (
-                        server_base_url, self.location_name, 
-                        name, scriptname),
-                        id="%s:%s" % (name, scriptname))
-                        for scriptname in self.scripts
-                    ]
-                md['stylesheets'] = [
-                    dict(url="%splugin/file/%s/%s/%s" % (
-                        server_base_url, self.location_name, name, 
-                        stylesheet),
-                        id="%s:%s" % (name, stylesheet))
-                    for stylesheet in self.stylesheets
+            md['stylesheets'] = [
+                dict(url="%sfile/at/%s%%3A%s" % (
+                    server_base_url, self.relative_location, 
+                    stylesheet),
+                    id="%s:%s" % (name, stylesheet))
+                for stylesheet in self.stylesheets
+            ]
+        else:
+            md['scripts'] = [
+                dict(url="%splugin/script/%s/%s/%s" % (
+                    server_base_url, self.location_name, 
+                    name, scriptname),
+                    id="%s:%s" % (name, scriptname))
+                    for scriptname in self.scripts
                 ]
-            
-            md['reloadURL'] = "%splugin/reload/%s" % (
-                server_base_url, name)
-            
-            if self._errors:
-                md['errors'] = self._errors
-            self._metadata = md
-            return md
-
-    def _putFilesInAttribute(self, attribute, glob, allowEmpty=True):
-        """Finds all of the plugin files matching the given glob
-        and puts them in the attribute given. If the
-        attribute is already set, it is returned directly."""
-        try:
-            return getattr(self, attribute)
-        except AttributeError:
-            loc = self.location
-            if loc.isdir():
-                l = [loc.relpathto(f) for f in self.location.walkfiles(glob)]
-            else:
-                l = [] if allowEmpty else [""]
-            setattr(self, attribute, l)
-            return l
+            md['stylesheets'] = [
+                dict(url="%splugin/file/%s/%s/%s" % (
+                    server_base_url, self.location_name, name, 
+                    stylesheet),
+                    id="%s:%s" % (name, stylesheet))
+                for stylesheet in self.stylesheets
+            ]
         
-    
-    @property
-    def stylesheets(self):
-        return self._putFilesInAttribute("_stylesheets", "*.css")
-    
-    @property
-    def scripts(self):
-        return self._putFilesInAttribute("_scripts", "*.js", 
-            allowEmpty=False)
-    
-    def get_script_text(self, scriptname):
-        """Look up the script at scriptname within this plugin."""
-        if not self.location.isdir():
-            return self.location.text()
-            
-        script_path = self.location / scriptname
-        if not script_path.exists():
-            return None
+        md['reloadURL'] = "%splugin/reload/%s" % (
+            server_base_url, name)
         
-        return script_path.text()
-        
-                
+        return md
 
 def find_plugins(search_path=None):
     """Return plugin descriptors for the plugins on the search_path.
@@ -193,43 +79,14 @@ def find_plugins(search_path=None):
     be used."""
     if search_path is None:
         search_path = config.c.plugin_path
-        
-    result = []
-    for path_entry in search_path:
-        path = path_entry['path']
-        for item in path.glob("*"):
-            # plugins are directories with a plugin.json file or 
-            # individual .js files.
-            if item.isdir():
-                mdfile = item / "plugin.json"
-                if not mdfile.exists():
-                    continue
-                name = item.basename()
-            elif item.ext == ".js":
-                name = item.splitext()[0].basename()
-            else:
-                continue
-                
-            plugin = Plugin(name, item, path_entry)
-            result.append(plugin)
-    return result
     
+    print "Searching for plugins along: %s" % (search_path)
+    
+    return base_find_plugins(search_path, cls=Plugin)
+
 def lookup_plugin(name, search_path=None):
     """Return the plugin descriptor for the plugin given."""
     if search_path is None:
         search_path = config.c.plugin_path
-        
-    for path_entry in search_path:
-        path = path_entry['path']
-        location = path / name
-        if not location.exists():
-            location = path / (name + ".js")
-        if location.exists():
-            if location.isdir():
-                mdfile = location / "plugin.json"
-                if not mdfile.exists():
-                    continue
-            plugin = Plugin(name, location, path_entry)
-            return plugin
     
-    return None
+    return base_lookup_plugin(name, search_path, cls=Plugin)    
