@@ -76,6 +76,7 @@ def test_default_plugin_registration():
     data = loads(response.body)
     md = data["plugin1"]
     assert "errors" not in md
+    assert md["resourceURL"] == "/server/plugin/file/testplugins/plugin1/resources/"
     assert "plugin3" in data
     md = data['plugin3']
     assert "errors" in md
@@ -124,6 +125,9 @@ def test_user_installed_plugins():
     assert "file/at/BespinSettings/plugins/MyPlugin.js%3A" in response.body
     assert "EditablePlugin" not in response.body
     assert "file/at/BespinSettings/plugins/BiggerPlugin%3Asomedir/script.js" in response.body
+    data = loads(response.body)
+    md = data["BiggerPlugin"]
+    assert md["resourceURL"] == "/server/file/at/BespinSettings/plugins/BiggerPlugin/resources/"
     
     response = app.put("/file/at/myplugins/EditablePlugin/plugin.json", "{}")
     response = app.put("/file/at/BespinSettings/pluginInfo.json", """{

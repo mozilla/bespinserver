@@ -52,6 +52,8 @@ class Plugin(BasePlugin):
                     id="%s:%s" % (name, stylesheet))
                 for stylesheet in self.stylesheets
             ]
+            md["resourceURL"] = "%sfile/at/%s/resources/" % (
+                server_base_url, self.relative_location)
         else:
             md['scripts'] = [
                 dict(url="%splugin/script/%s/%s/%s" % (
@@ -67,6 +69,8 @@ class Plugin(BasePlugin):
                     id="%s:%s" % (name, stylesheet))
                 for stylesheet in self.stylesheets
             ]
+            md["resourceURL"] = "%splugin/file/%s/%s/resources/" % (
+                server_base_url, self.location_name, name)
         
         md['reloadURL'] = "%splugin/reload/%s" % (
             server_base_url, name)
