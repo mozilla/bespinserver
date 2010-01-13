@@ -21,7 +21,7 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-from bespinbuild.plugins import (Plugin as BasePlugin,
+from dryice.plugins import (Plugin as BasePlugin,
                                  find_plugins as base_find_plugins,
                                  lookup_plugin as base_lookup_plugin)
 
