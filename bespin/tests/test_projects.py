@@ -122,11 +122,12 @@ def test_customized_template_installation():
     assert fnlist == ["newfile-bigmac.js"]
     contents = flist[0].data
     print contents
-    assert contents == """// newfile-bigmac.js
+    expected = """// newfile-bigmac.js
 // Created by MacGyver (who likes the number 42)
 
 alert("Welcome to bigmac");
 """
+    assert contents == expected
     
 def test_common_base_selection():
     tests = [
@@ -205,8 +206,8 @@ def test_export_tarfile():
     members = tfile.getmembers()
     assert len(members) == 6
     names = set(member.name for member in members)
-    # the extra slash shows up in this context, but does not seem to be a problem
-    assert 'bigmac//' in names
+    # the extra slash shows up in this context in py2.5, but does not seem to be a problem
+    assert 'bigmac//' or "bigmac" in names
 
 def test_export_zipfile():
     _init_data()

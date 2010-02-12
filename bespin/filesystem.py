@@ -685,8 +685,15 @@ class Project(object):
         pfile = tarfile.open(filename, fileobj=file_obj)
         max_import_file_size = config.c.max_import_file_size
         info = list(pfile)
+        
+        members = []
+        for member in info:
+            name = member.name
+            if member.isdir() and not member.name.endswith("/"):
+                name += "/"
+            members.append(name)
 
-        base = _find_common_base(member.name for member in info)
+        base = _find_common_base(members)
         base_len = len(base)
 
         for member in info:
@@ -821,8 +828,8 @@ class Project(object):
         # make the query lower case so that the match boosting
         # in _SearchMatch can use it
         query = query.lower()
-        if isinstance(query, unicode):
-            query = query.encode('utf-8')
+        # if isinstance(query, unicode):
+        #     query = query.encode('utf-8')
         escaped_query = [re.escape(char) for char in query]
         search_re = ".*".join(escaped_query)
         files = self.metadata.search_files(search_re)

@@ -43,7 +43,6 @@ from bespin import config
 
 class Plugin(BasePlugin):
     def load_metadata(self):
-        print "loading metadata for %s from %s" % (self.name, self.location)
         md = super(Plugin, self).load_metadata()
         
         server_base_url = config.c.server_base_url
@@ -97,8 +96,6 @@ def find_plugins(search_path=None):
     be used."""
     if search_path is None:
         search_path = config.c.plugin_path
-    
-    print "Searching for plugins along: %s" % (search_path)
     
     return base_find_plugins(search_path, cls=Plugin)
 

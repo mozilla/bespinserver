@@ -393,6 +393,7 @@ def file_list_all(request, response):
 def file_search(request, response):
     user = request.user
     query = request.GET.get("q", "")
+    query = query.decode("utf-8")
     include = request.GET.get("i", "")
     limit = request.GET.get("limit", 20)
     try:

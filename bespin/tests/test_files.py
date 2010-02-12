@@ -645,40 +645,6 @@ def test_error_conditions_from_web():
     app.get("/file/at/bigmac/", status=400)
     app.get("/file/at/", status=400)
 
-# Edit related functions are likely to change for collab
-# DELETE if this is not needed
-
-# def test_edit_interface():
-#     _init_data()
-#     app.put("/edit/at/bigmac/bar/baz", "Starting a file")
-#     app.put("/edit/at/bigmac/bar/baz", "Second edit")
-#     resp = app.get("/edit/list/bigmac/bar/baz")
-#     assert resp.content_type == "application/json"
-#     data = simplejson.loads(resp.body)
-#     assert data == ["Starting a file", "Second edit"]
-#     
-#     resp = app.get("/edit/recent/1/bigmac/bar/baz")
-#     assert resp.content_type == "application/json"
-#     data = simplejson.loads(resp.body)
-#     assert data == ["Second edit"]
-#     
-#     resp = app.get("/file/listopen/")
-#     data = simplejson.loads(resp.body)
-#     bigmac_data = data['bigmac']
-#     assert len(bigmac_data) == 1
-#     assert bigmac_data['bar/baz']['mode'] == 'rw'
-#     
-#     app.post("/edit/reset/")
-#     resp = app.get("/edit/list/bigmac/bar/baz")
-#     data = simplejson.loads(resp.body)
-#     assert data == []
-#     
-#     app.put("/edit/at/bigmac/bar/baz", "Starting a file")
-#     app.post("/edit/reset/bigmac/bar/baz")
-#     resp = app.get("/edit/list/bigmac/bar/baz")
-#     data = simplejson.loads(resp.body)
-#     assert data == []
-    
 def test_get_file_stats_from_web():
     _init_data()
     app.put("/file/at/bigmac/reqs", "Chewing gum wrapper")
