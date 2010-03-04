@@ -1058,6 +1058,9 @@ def _get_user_plugin_path(request):
             root = user.get_location()
             root_len = len(root)
             path.extend(dict(name="user", path=root / p, chop=root_len) for p in pi_path)
+        pi_plugins = pluginInfo.get("plugins", None)
+        if pi_plugins:
+            path.extend(dict(name="user", plugin = root / p, chop=root_len) for p in pi_plugins)
         
     path.append(dict(name="user", path=project.location / "plugins", 
         chop=len(user.get_location())))
