@@ -1035,6 +1035,8 @@ def _plugin_response(response, path=None, plugin_list=None):
 def register_plugins(request, response):
     return _plugin_response(response)
 
+leading_slash = re.compile("^/")
+
 def _get_user_plugin_path(request):
     user = request.user
     if not user:
@@ -1053,14 +1055,16 @@ def _get_user_plugin_path(request):
     
     path = []
     if pluginInfo:
+        root = user.get_location()
+        root_len = len(root)
+        pi_plugins = pluginInfo.get("plugins", None)
+        # NOTE: it's important to trim leading slashes from these paths
+        # because the user can edit the pluginInfo.json file directly.
+        if pi_plugins:
+            path.extend(dict(name="user", plugin = root / leading_slash.sub("", p), chop=root_len) for p in pi_plugins)
         pi_path = pluginInfo.get("path", None)
         if pi_path:
-            root = user.get_location()
-            root_len = len(root)
-            path.extend(dict(name="user", path=root / p, chop=root_len) for p in pi_path)
-        pi_plugins = pluginInfo.get("plugins", None)
-        if pi_plugins:
-            path.extend(dict(name="user", plugin = root / p, chop=root_len) for p in pi_plugins)
+            path.extend(dict(name="user", path=root / leading_slash.sub("", p), chop=root_len) for p in pi_path)
         
     path.append(dict(name="user", path=project.location / "plugins", 
         chop=len(user.get_location())))
