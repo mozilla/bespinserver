@@ -34,6 +34,8 @@
 #
 # ***** END LICENSE BLOCK *****
 # 
+import os
+from urlparse import urlparse
 
 from dryice.plugins import (Plugin as BasePlugin,
                                  find_plugins as base_find_plugins,
@@ -105,3 +107,22 @@ def lookup_plugin(name, search_path=None):
         search_path = config.c.plugin_path
     
     return base_lookup_plugin(name, search_path, cls=Plugin)    
+
+def install_plugin(f, url, destination, path_entry, plugin_name=None):
+    if not destination.exists():
+        destination.mkdir()
+    
+    if plugin_name is None:
+        url_parts = urlparse(url)
+        filename = os.path.basename(url_parts[2])
+        plugin_name = os.path.splitext(filename)[0]
+    
+    
+    # check for single file plugin
+    if url.endswith(".js"):
+        destination = destination / (plugin_name + ".js")
+        destination.write_bytes(f.read())
+        plugin = Plugin(plugin_name, destination, path_entry)
+        return plugin
+        
+    

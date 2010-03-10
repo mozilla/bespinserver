@@ -41,6 +41,7 @@ from simplejson import loads
 
 from bespin import config, plugins, controllers
 from bespin.database import User, Base
+from bespin.filesystem import get_project
 
 from __init__ import BespinTestApp
 
@@ -77,6 +78,32 @@ def _init_data():
         
     macgyver = User.find_user("MacGyver")
 
+    
+def test_install_single_file_plugin():
+    _init_data()
+    settings_project = get_project(macgyver, macgyver, "BespinSettings")
+    destination = settings_project.location / "plugins"
+    path_entry = dict(chop=len(macgyver.get_location()), name="user")
+    sfp = plugindir / "SingleFilePlugin1.js"
+    plugin = plugins.install_plugin(open(sfp), "http://somewhere/file.js", 
+                                    destination, path_entry, "APlugin")
+    destfile = destination / "APlugin.js"
+    assert destfile.exists()
+    desttext = destfile.text()
+    assert "someFunction" in desttext
+    assert plugin.name == "APlugin"
+    assert plugin.location == destfile
+    assert plugin.relative_location == "BespinSettings/plugins/APlugin.js"
+    metadata = plugin.metadata
+    type = metadata['type']
+    assert type == "user"
+    
+    plugin = plugins.install_plugin(open(sfp), "http://somewhere/Flibber.js",
+                                    destination, path_entry)
+    destfile = destination / "Flibber.js"
+    assert destfile.exists()
+    assert plugin.name == "Flibber"
+    
 # Web tests
 
 def test_default_plugin_registration():
@@ -171,4 +198,3 @@ def test_plugin_reload():
     assert '"plugin2": {' in response.body
     # just need the plugin, not its dependents
     assert '"depends": ["plugin2"]' not in response.body
-    

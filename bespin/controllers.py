@@ -452,11 +452,12 @@ def validate_url(url):
         raise BadRequest("Invalid url: " + url)
     return url
     
-@expose(r'^/project/fromurl/(?P<project_name>[^/]+)', "POST")
-def import_from_url(request, response):
-    project_name = request.kwargs['project_name']
-    
-    url = validate_url(request.body)
+def _download_data(url, request):
+    """downloads the data to a temporary file, raising BadRequest
+    if there are issues, doing a HEAD request first to ensure that
+    the URL is good and also ensuring that the user has enough
+    space available."""
+    url = validate_url(url)
     try:
         resp = httplib2.Http().request(url, method="HEAD")
     except httplib2.HttpLib2Error, e:
@@ -478,6 +479,14 @@ def import_from_url(request, response):
     tempdatafile.write(datafile.read())
     datafile.close()
     tempdatafile.seek(0)
+    return tempdatafile
+    
+    
+@expose(r'^/project/fromurl/(?P<project_name>[^/]+)', "POST")
+def import_from_url(request, response):
+    project_name = request.kwargs['project_name']
+    
+    tempdatafile = _download_data(request.body, request)
     url_parts = urlparse(url)
     filename = os.path.basename(url_parts[2])
     _perform_import(request.user, project_name, filename, tempdatafile)
@@ -1164,6 +1173,35 @@ def _wrap_script(plugin_name, script_path, script_text):
 ;}); tiki.script('%s:%s');""" % (plugin_name, module_name, 
         script_text, plugin_name, script_path)
 
+urlmatch = re.compile(r'^(http|https)://')
+
+@expose(r'^/plugin/install/', 'POST')
+def install_plugin(request, response):
+    """Installs a plugin into the user's BespinSettings/plugins directory."""
+    user = request.user
+    url = request.POST.get('url')
+    plugin_name = request.POST.get('pluginName')
+    
+    if not url or not urlmatch.search(url):
+        raise BadRequest("URL not provided")
+    
+    if not plugin_name or "/" in plugin_name or ".." in plugin_name:
+        raise BadRequest("Invalid plugin name. / and .. are not permitted")
+    
+    tempdatafile = _download_data(url, request)
+    settings_project = get_project(user, user, "BespinSettings")
+    destination = settings_project.location / "plugins"
+    path_entry = dict(name="user", chop=len(user.get_location()))
+    plugin = plugins.install_plugin(tempdatafile, url, destination, 
+                                    path_entry, plugin_name)
+    tempdatafile.close()
+    
+    plugin_collection = dict()
+    plugin_collection[plugin.name] = plugin.metadata
+    response.body = simplejson.dumps(plugin_collection)
+    response.content_type = "application/json"
+    return response()
+    
 
 def db_middleware(app):
     def wrapped(environ, start_response):
