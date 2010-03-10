@@ -39,7 +39,7 @@ from urlrelay import url
 from webob import Request, Response
 import logging
 
-from bespin import filesystem, database, config
+from bespin import filesystem, database, config, plugins
 from bespin.__init__ import API_VERSION
 from bespin.database import User
 
@@ -149,6 +149,8 @@ def expose(url_pattern, method=None, auth=True, skip_token_check=False, profile=
                 except filesystem.FSException, e:
                     response.error("400 Bad Request", e)
                 except filesystem.BadValue, e:
+                    response.error("400 Bad Request", e)
+                except plugins.PluginError, e:
                     response.error("400 Bad Request", e)
                 except BadRequest, e:
                     response.error("400 Bad Request", e)

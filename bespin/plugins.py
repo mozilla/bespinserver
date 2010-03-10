@@ -41,7 +41,10 @@ from dryice.plugins import (Plugin as BasePlugin,
                                  find_plugins as base_find_plugins,
                                  lookup_plugin as base_lookup_plugin)
 
-from bespin import config    
+from bespin import config
+
+class PluginError(Exception):
+    pass
 
 class Plugin(BasePlugin):
     def load_metadata(self):
@@ -108,7 +111,8 @@ def lookup_plugin(name, search_path=None):
     
     return base_lookup_plugin(name, search_path, cls=Plugin)    
 
-def install_plugin(f, url, destination, path_entry, plugin_name=None):
+def install_plugin(f, url, settings_project, path_entry, plugin_name=None):
+    destination = settings_project.location / "plugins"
     if not destination.exists():
         destination.mkdir()
     
@@ -117,12 +121,21 @@ def install_plugin(f, url, destination, path_entry, plugin_name=None):
         filename = os.path.basename(url_parts[2])
         plugin_name = os.path.splitext(filename)[0]
     
-    
     # check for single file plugin
     if url.endswith(".js"):
         destination = destination / (plugin_name + ".js")
         destination.write_bytes(f.read())
-        plugin = Plugin(plugin_name, destination, path_entry)
-        return plugin
-        
+    elif url.endswith(".tgz") or url.endswith(".tar.gz"):
+        destination = destination / plugin_name
+        settings_project.import_tarball(plugin_name + ".tgz", f, 
+            "plugins/" + plugin_name + "/")
+    elif url.endswith(".zip"):
+        destination = destination / plugin_name
+        settings_project.import_zipfile(plugin_name + ".zip", f, 
+            "plugins/" + plugin_name + "/")
+    else:
+        raise PluginError("Plugin must be a .js, .zip or .tgz file")
+    
+    plugin = Plugin(plugin_name, destination, path_entry)
+    return plugin
     

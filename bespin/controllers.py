@@ -1190,9 +1190,8 @@ def install_plugin(request, response):
     
     tempdatafile = _download_data(url, request)
     settings_project = get_project(user, user, "BespinSettings")
-    destination = settings_project.location / "plugins"
     path_entry = dict(name="user", chop=len(user.get_location()))
-    plugin = plugins.install_plugin(tempdatafile, url, destination, 
+    plugin = plugins.install_plugin(tempdatafile, url, settings_project, 
                                     path_entry, plugin_name)
     tempdatafile.close()
     

@@ -86,7 +86,7 @@ def test_install_single_file_plugin():
     path_entry = dict(chop=len(macgyver.get_location()), name="user")
     sfp = plugindir / "SingleFilePlugin1.js"
     plugin = plugins.install_plugin(open(sfp), "http://somewhere/file.js", 
-                                    destination, path_entry, "APlugin")
+                                    settings_project, path_entry, "APlugin")
     destfile = destination / "APlugin.js"
     assert destfile.exists()
     desttext = destfile.text()
@@ -99,10 +99,38 @@ def test_install_single_file_plugin():
     assert type == "user"
     
     plugin = plugins.install_plugin(open(sfp), "http://somewhere/Flibber.js",
-                                    destination, path_entry)
+                                    settings_project, path_entry)
     destfile = destination / "Flibber.js"
     assert destfile.exists()
     assert plugin.name == "Flibber"
+    
+def test_install_tarball_plugin():
+    _init_data()
+    settings_project = get_project(macgyver, macgyver, "BespinSettings")
+    destination = settings_project.location / "plugins"
+    path_entry = dict(chop=len(macgyver.get_location()), name="user")
+    mfp = path(__file__).dirname() / "plugin1.tgz"
+    plugin = plugins.install_plugin(open(mfp), "http://somewhere/file.tgz", 
+                                    settings_project, path_entry, "APlugin")
+    
+    plugin_info = destination / "APlugin" / "plugin.json"
+    assert plugin_info.exists()
+    dep = plugin.metadata['depends']
+    assert dep[0] == 'plugin2'
+    
+def test_install_zipfile_plugin():
+    _init_data()
+    settings_project = get_project(macgyver, macgyver, "BespinSettings")
+    destination = settings_project.location / "plugins"
+    path_entry = dict(chop=len(macgyver.get_location()), name="user")
+    mfp = path(__file__).dirname() / "plugin1.zip"
+    plugin = plugins.install_plugin(open(mfp), "http://somewhere/file.zip", 
+                                    settings_project, path_entry, "APlugin")
+    
+    plugin_info = destination / "APlugin" / "plugin.json"
+    assert plugin_info.exists()
+    dep = plugin.metadata['depends']
+    assert dep[0] == 'plugin2'
     
 # Web tests
 

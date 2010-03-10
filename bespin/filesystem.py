@@ -678,10 +678,9 @@ class Project(object):
             config.c.stats.decr("files")
             self.metadata.cache_delete(path)
 
-    def import_tarball(self, filename, file_obj):
+    def import_tarball(self, filename, file_obj, prefix=""):
         """Imports the tarball in the file_obj into the project
-        project owned by user. If the project already exists,
-        IT WILL BE WIPED OUT AND REPLACED."""
+        project owned by user."""
         pfile = tarfile.open(filename, fileobj=file_obj)
         max_import_file_size = config.c.max_import_file_size
         info = list(pfile)
@@ -703,13 +702,12 @@ class Project(object):
                 if member.size > max_import_file_size:
                     raise FSException("File %s too large (max is %s bytes)"
                         % (member.name, max_import_file_size))
-                self.save_file(member.name[base_len:],
+                self.save_file(prefix + member.name[base_len:],
                     pfile.extractfile(member).read())
 
-    def import_zipfile(self, filename, file_obj):
+    def import_zipfile(self, filename, file_obj, prefix=""):
         """Imports the zip file in the file_obj into the project
-        project owned by user. If the project already exists,
-        IT WILL BE WIPED OUT AND REPLACED."""
+        project owned by user."""
         max_import_file_size = config.c.max_import_file_size
 
         pfile = zipfile.ZipFile(file_obj)
@@ -724,7 +722,7 @@ class Project(object):
             if member.file_size > max_import_file_size:
                 raise FSException("File %s too large (max is %s bytes)"
                     % (member.filename, max_import_file_size))
-            self.save_file(member.filename[base_len:],
+            self.save_file(prefix + member.filename[base_len:],
                 pfile.read(member.filename))
 
     def export_tarball(self):
