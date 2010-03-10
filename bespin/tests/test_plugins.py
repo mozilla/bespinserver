@@ -97,6 +97,7 @@ def test_install_single_file_plugin():
     metadata = plugin.metadata
     type = metadata['type']
     assert type == "user"
+    assert metadata['userLocation'] == "BespinSettings/plugins/APlugin.js"
     
     plugin = plugins.install_plugin(open(sfp), "http://somewhere/Flibber.js",
                                     settings_project, path_entry)
@@ -117,6 +118,8 @@ def test_install_tarball_plugin():
     assert plugin_info.exists()
     dep = plugin.metadata['depends']
     assert dep[0] == 'plugin2'
+    user_location = plugin.metadata['userLocation']
+    assert user_location == "BespinSettings/plugins/APlugin/"
     
 def test_install_zipfile_plugin():
     _init_data()

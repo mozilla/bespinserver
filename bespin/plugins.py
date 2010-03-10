@@ -72,6 +72,10 @@ class Plugin(BasePlugin):
             ]
             md["resourceURL"] = "%sfile/at/%s/resources/" % (
                 server_base_url, self.relative_location)
+            user_location = self.relative_location
+            if self.location.isdir():
+                user_location += "/"
+            md['userLocation'] = user_location
         else:
             md['scripts'] = [
                 dict(url="%splugin/script/%s/%s/%s" % (
