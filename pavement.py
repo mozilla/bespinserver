@@ -217,3 +217,37 @@ def production():
     
     call_pavement("production/pavement.py", "bootstrap")
     
+@task
+@cmdopts([('user=', 'u', 'User to set up for Bespin editing')])
+def editbespin(options):
+    """Use Bespin to edit Bespin. This will change the given
+    user's file location to the directory above Bespin, allowing
+    you to edit Bespin (and any other projects you have
+    in that directory)."""
+    
+    if not 'editbespin' in options or not options.editbespin.user:
+        raise BuildFailure("You must specify a user with -u for this task.")
+        
+    user = options.editbespin.user
+    
+    from bespin import config
+    from bespin import database, filesystem
+    from sqlalchemy.orm.exc import NoResultFound
+    
+    config.set_profile("dev")
+    config.activate_profile()
+    session = config.c.session_factory()
+    try:
+        user = session.query(database.User).filter_by(username=user).one()
+    except NoResultFound:
+        raise BuildFailure("I couldn't find %s in the database. Sorry!" % (user))
+    
+    location = path.getcwd().parent.abspath()
+    user.file_location = location
+    user.recompute_files()
+    session.commit()
+    bespinsettings_loc = location / "BespinSettings"
+    if not bespinsettings_loc.exists():
+        project = filesystem.get_project(user, user, "BespinSettings", create=True)
+        project.install_template('usertemplate')
+    info("User %s set up to access directory %s" % (user, location))
