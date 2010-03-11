@@ -235,6 +235,22 @@ def test_create_a_project_from_the_web():
     assert 'bigmac' in project_names
     bigmac = get_project(macgyver, macgyver, 'bigmac')
     assert not bigmac.list_files()
+
+def test_list_all():
+    _init_data()
+    app.put("/file/at/bigmac/foo/bar/baz.txt", "Baz file here!")
+    app.put("/file/at/bigmac/other/path.txt", "Other file here!")
+    resp = app.get("/file/list_all/bigmac/")
+    assert resp.content_type == "application/json"
+    data = simplejson.loads(resp.body)
+    assert isinstance(data, list)
+    assert len(data) == 2
+    
+    resp = app.get("/file/list_all/bigmac/foo")
+    assert resp.content_type == "application/json"
+    data = simplejson.loads(resp.body)
+    assert isinstance(data, list)
+    assert len(data) == 1
     
 def test_import_from_the_web():
     tests = [tarfilename, zipfilename]

@@ -377,14 +377,14 @@ def install_file_template(request, response):
     response.content_type = "text/plain"
     return response()
 
-@expose(r'^/file/list_all/(?P<project_name>.*)/$', 'GET')
+@expose(r'^/file/list_all/(?P<path>.*)$', 'GET')
 def file_list_all(request, response):
     user = request.user
-    project_name = request.kwargs['project_name']
+    owner, project_name, path = _split_path(request)
     project = get_project(user, user, project_name)
     metadata = project.metadata
 
-    files = metadata.get_file_list()
+    files = metadata.get_file_list(path)
     metadata.close()
     
     return _respond_json(response, files)

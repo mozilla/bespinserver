@@ -1041,13 +1041,16 @@ class ProjectMetadata(dict):
         c.close()
         return result
 
-    def get_file_list(self):
+    def get_file_list(self, path=None):
         """Return a list of all files."""
         conn = self.connection
         c = conn.cursor()
-        rs = c.execute(
-            "SELECT filename FROM search_cache"
-        )
+        query = "SELECT filename FROM search_cache"
+        if path:
+            query += " WHERE filename LIKE ?"
+            rs = c.execute(query, (path + "%",))
+        else:
+            rs = c.execute(query)
         result = [item[0] for item in rs]
         c.close()
         return result
