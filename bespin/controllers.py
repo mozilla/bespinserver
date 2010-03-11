@@ -380,12 +380,28 @@ def install_file_template(request, response):
 @expose(r'^/file/list_all/(?P<path>.*)$', 'GET')
 def file_list_all(request, response):
     user = request.user
-    owner, project_name, path = _split_path(request)
-    project = get_project(user, user, project_name)
-    metadata = project.metadata
+    
+    path = request.kwargs['path']
+    if not path:
+        projects = request.user.get_all_projects(True)
+        files = []
+        for project in projects:
+            if project.owner == user:
+                pname = project.short_name
+            else:
+                pname = project.owner.username + "+" + project.short_name
+            metadata = project.metadata
+            files.extend(pname + "/" + name 
+                for name in metadata.get_file_list())
+            metadata.close()
+    else:
+        owner, project_name, path = _split_path(request)
+    
+        project = get_project(user, user, project_name)
+        metadata = project.metadata
 
-    files = metadata.get_file_list(path)
-    metadata.close()
+        files = metadata.get_file_list(path)
+        metadata.close()
     
     return _respond_json(response, files)
 

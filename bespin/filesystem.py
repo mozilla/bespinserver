@@ -1047,11 +1047,13 @@ class ProjectMetadata(dict):
         c = conn.cursor()
         query = "SELECT filename FROM search_cache"
         if path:
+            pathlen = len(path)
             query += " WHERE filename LIKE ?"
             rs = c.execute(query, (path + "%",))
+            result = [item[0][pathlen:] for item in rs]
         else:
             rs = c.execute(query)
-        result = [item[0] for item in rs]
+            result = [item[0] for item in rs]
         c.close()
         return result
 

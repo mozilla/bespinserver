@@ -246,11 +246,18 @@ def test_list_all():
     assert isinstance(data, list)
     assert len(data) == 2
     
-    resp = app.get("/file/list_all/bigmac/foo")
+    resp = app.get("/file/list_all/bigmac/foo/")
     assert resp.content_type == "application/json"
     data = simplejson.loads(resp.body)
     assert isinstance(data, list)
     assert len(data) == 1
+    assert data[0] == "bar/baz.txt"
+    
+    resp = app.get("/file/list_all/")
+    assert resp.content_type == "application/json"
+    data = simplejson.loads(resp.body)
+    assert isinstance(data, list)
+    assert len(data) > 2, "Should have found all of the files"
     
 def test_import_from_the_web():
     tests = [tarfilename, zipfilename]
