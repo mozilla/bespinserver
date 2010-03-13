@@ -2,4 +2,5 @@
 \.pyc$
 ^testfiles
 ^devdata.db
+^production
 ^devserver.log
