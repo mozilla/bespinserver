@@ -581,6 +581,22 @@ def unfollow(request, response):
         request.user.unfollow(other_user)
     return _users_followed_response(request.user, response)
 
+@expose(r'^/network/broadcast/', 'POST')
+def broadcast(request, response):
+    user = request.user
+    try:
+        text = request.POST['text']
+    except KeyError:
+        text = "*UNSPECIFIED*"
+    followers = user.users_following_me()
+    for follower in followers:
+        follower.publish({
+            "msgtargetid": "42",
+            "from": user.username,
+            "text": text
+        })
+    return _users_followed_response(request.user, response)
+
 @expose(r'^/group/list/all', 'GET')
 def group_list_all(request, response):
     groups = request.user.get_groups()

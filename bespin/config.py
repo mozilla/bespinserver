@@ -104,10 +104,12 @@ c.static_override = None
 
 # turns on asynchronous running of long jobs (like vcs)
 c.async_jobs = True
+# can be "" or False, "beanstalk" or True, or "restmq" for now
 
-# beanstalkd host and port
+# queue host, port, and a polling interval in seconds (for now)
 c.queue_host = None
 c.queue_port = None
+c.queue_timeout = 0.3
 
 # holds the actual queue object
 c.queue = None
@@ -305,7 +307,11 @@ def activate_profile():
             c.queue_port = int(c.queue_port)
 
         from bespin import queue
-        c.queue = queue.BeanstalkQueue(c.queue_host, c.queue_port)
+
+        if c.async_jobs is True or c.async_jobs == "beanstalk":
+            c.queue = queue.BeanstalkQueue(c.queue_host, c.queue_port)
+        elif c.async_jobs == "restmq":
+            c.queue = queue.RestMqQueue(c.queue_host, c.queue_port, timeout=float(c.queue_timeout))
 
     if c.redis_port:
         c.redis_port = int(c.redis_port)

@@ -42,6 +42,10 @@ import time
 import logging
 import sys
 
+import urllib
+import urllib2
+import time
+
 from bespin import config
 
 try:
@@ -55,7 +59,7 @@ class QueueItem(object):
     next_jobid = 0
 
     def __init__(self, id, queue, message, execute, error_handler=None,
-                job=None, use_db=True):
+                job=None, use_db=True, origin=None):
         if id == None:
             self.id = QueueItem.next_jobid
             QueueItem.next_jobid = QueueItem.next_jobid + 1
@@ -67,6 +71,7 @@ class QueueItem(object):
         self.error_handler = error_handler
         self.job = job
         self.use_db = use_db
+        self.origin = origin
         self.session = None
 
     def run(self):
@@ -109,8 +114,12 @@ class QueueItem(object):
         error_handler(self, e)
 
     def done(self):
-        if self.job:
-            self.job.delete()
+        if origin == "beanstalk":
+            if self.job:
+                self.job.delete()
+        elif origin == "restmq":
+            if self.job:
+                self.job.delete(self.queue, self.id)
 
 class BeanstalkQueue(object):
     """Manages Bespin jobs within a beanstalkd server.
@@ -153,11 +162,70 @@ class BeanstalkQueue(object):
                 use_db = message.pop('__use_db')
                 qi = QueueItem(item.jid, name, message,
                                 execute, error_handler=error_handler,
-                                job=item, use_db=use_db)
+                                job=item, use_db=use_db, origin="beanstalk")
                 yield qi
 
     def close(self):
         self.conn.close()
+
+class RestMqQueue(object):
+    """
+    Manages Bespin jobs within a RestMQ server.
+
+    http://github.com/gleicon/restmq
+    """
+
+    def __init__(self, host, port, timeout=0.3):
+        self.host = host or "localhost"
+        self.port = port or 8888
+        self.timeout = timeout
+        self.url = "http://" + self.host + ":" + self.port + "/queue"
+        
+    def _do_cmd(self, **kwargs):
+        # special treatment of 'value'
+        if 'value' in kwargs:
+            kwargs['value'] = simplejson.dumps(kwargs['value'])
+        req = urllib2.Request(
+            self.url,
+            urllib.urlencode({
+                'body': simplejson.dumps(kwargs)
+            })
+        )
+        rsp = urllib2.urlopen(req)
+        obj = simplejson.loads(rsp.read())
+        return obj
+
+    def enqueue(self, name, message, execute, error_handler, use_db):
+        message['__execute'] = execute
+        message['__error_handler'] = error_handler
+        message['__use_db'] = use_db
+        obj = self._do_cmd(cmd="add", queue=name, value=message)
+        return obj and obj['key'] or None
+
+    def delete(name, id):
+        return self._do_cmd(cmd="del", queue=name, key=id)
+
+    def read_queue(self, name):
+        log.debug("Starting to read %s on %s", name, self.url)
+        while True:
+            log.debug("Reserving next job")
+            item = self._do_cmd(cmd="get", queue=name)
+            if item is None or ('error' in item):
+                time.sleep(self.timeout)
+                continue
+            log.debug("Job received (%s)", item['key'])
+            message = simplejson.loads(item['value'])
+            execute = message.pop('__execute')
+            error_handler = message.pop('__error_handler')
+            use_db = message.pop('__use_db')
+            qi = QueueItem(item['key'], name, message,
+                            execute, error_handler=error_handler,
+                            job=self, use_db=use_db, origin="restmq")
+            yield qi
+
+    def close(self):
+        # don't need to close anything
+        pass
 
 def _resolve_function(namestring):
     modulename, funcname = namestring.split(":")
@@ -199,4 +267,3 @@ def process_queue(args=None):
         log.debug("Message: %s", qi.message)
         qi.run()
         qi.done()
-
