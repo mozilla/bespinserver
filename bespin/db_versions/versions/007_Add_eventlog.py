@@ -14,7 +14,7 @@ from sqlalchemy.orm.exc import NoResultFound
 metadata = MetaData()
 metadata.bind = migrate_engine
 
-EventLog = Table('eventlog', Base.metadata, 
+EventLog = Table('eventlog', metadata, 
     Column('ts', DateTime, default=datetime.now),
     Column('kind', String(10)),
     Column('username', String(128), default=None),

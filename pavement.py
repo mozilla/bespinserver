@@ -250,3 +250,26 @@ def editbespin(options):
         project = filesystem.get_project(user, user, "BespinSettings", create=True)
         project.install_template('usertemplate')
     info("User %s set up to access directory %s" % (user, location))
+
+@task
+def upgrade():
+    """Upgrade your database."""
+    from bespin import config, model, db_versions
+    from migrate.versioning.shell import main
+    config.set_profile('dev')
+    config.activate_profile()
+    repository = str(path(db_versions.__file__).dirname())
+    dburl = config.c.dburl
+    dry("Run the database upgrade", main, ["upgrade", dburl, repository])
+
+@task
+def try_upgrade():
+    """Run SQLAlchemy-migrate test on your database."""
+    from bespin import config, model, db_versions
+    from migrate.versioning.shell import main
+    config.set_profile('dev')
+    config.activate_profile()
+    repository = str(path(db_versions.__file__).dirname())
+    dburl = config.c.dburl
+    dry("Test the database upgrade", main, ["test", repository, dburl])
+
