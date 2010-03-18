@@ -98,7 +98,8 @@ def create_db():
     
     repository = str(path(db_versions.__file__).dirname())
     dburl = config.c.dburl
-    dry("Turn on migrate versioning", main, ["version_control", dburl, repository])
+    result = sh("python bespin/db_versions/manage.py version", capture=True)
+    dry("Turn on migrate versioning", main, ["version_control", "--version", result.rstrip(), dburl, repository])
 
 
 @task
