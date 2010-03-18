@@ -45,11 +45,13 @@ from __init__ import BespinTestApp
 import simplejson
 from path import path
 
+from sqlalchemy import and_
+
 from bespin import config, controllers, filesystem
 
 from bespin.filesystem import File, get_project, ProjectView
 from bespin.filesystem import FSException, FileNotFound, OverQuota, FileConflict, BadValue
-from bespin.database import User, Base
+from bespin.database import User, Base, _get_session, EventLog
 
 tarfilename = os.path.join(os.path.dirname(__file__), "ut.tgz")
 zipfilename = os.path.join(os.path.dirname(__file__), "ut.zip")
@@ -99,6 +101,7 @@ def test_basic_file_creation():
     starting_point = macgyver.amount_used
     bigmac = get_project(macgyver, macgyver, "bigmac", create=True)
     bigmac.save_file("reqs", "Chewing gum wrapper")
+    
     file_obj = File(bigmac, "reqs")
     data = str(file_obj.data)
     assert data == 'Chewing gum wrapper'
@@ -596,6 +599,12 @@ def test_good_file_operations_from_web():
     fileobj = File(bigmac, "reqs")
     contents = str(fileobj.data)
     assert contents == "Chewing gum wrapper"
+    
+    s = _get_session()
+    sel = EventLog.select().where(and_(EventLog.c.kind=='filesave', 
+        EventLog.c.username=='MacGyver'))
+    result = s.connection().execute(sel).fetchall()
+    assert len(result) == 1
     
     resp = app.get("/file/at/bigmac/reqs")
     assert resp.body == "Chewing gum wrapper"

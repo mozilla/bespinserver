@@ -266,6 +266,7 @@ def putfile(request, response):
         project.create_directory(path)
     elif path:
         project.save_file(path, request.body)
+    log_event("filesave", request.user)
     return response()
 
 @expose(r'^/file/at/(?P<path>.*)$', 'GET')
