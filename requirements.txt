@@ -3,7 +3,7 @@ WebOb
 WebTest
 nose
 http://pypi.python.org/packages/source/s/simplejson/simplejson-2.0.9.tar.gz#egg=simplejson
-SQLAlchemy
+SQLAlchemy<0.5.99
 sqlalchemy-migrate>0.5.1
 ext/Paste-1.7.3dev-r7791.tar.gz
 static
