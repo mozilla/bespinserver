@@ -57,7 +57,7 @@ from webob import Request, Response
 from bespin.config import c
 from bespin.framework import expose, BadRequest
 from bespin import vcs, deploy
-from bespin.database import User, get_project
+from bespin.database import User, get_project, log_event
 from bespin.filesystem import NotAuthorized, OverQuota, File, FileNotFound
 from bespin.utils import send_email_template
 from bespin import filesystem, queue, plugins
@@ -1043,7 +1043,7 @@ def run_deploy(request, response):
         taskname="deploy %s" % (project_name)))
     return response()
     
-def _plugin_response(response, path=None, plugin_list=None):
+def _plugin_response(response, path=None, plugin_list=None, log_user=None):
     response.content_type = "application/json"
     
     
@@ -1052,6 +1052,9 @@ def _plugin_response(response, path=None, plugin_list=None):
 
     metadata = dict((plugin.name, plugin.metadata) 
         for plugin in plugin_list)
+    
+    if log_user:
+        log_event("userplugin", log_user, len(metadata))
     
     response.body = simplejson.dumps(metadata)
     return response()
@@ -1098,7 +1101,7 @@ def _get_user_plugin_path(request):
 @expose(r'^/plugin/register/user$', 'GET', auth=True)
 def register_user_plugins(request, response):
     path = _get_user_plugin_path(request)
-    return _plugin_response(response, path)
+    return _plugin_response(response, path, log_user=request.user)
 
 @expose(r'^/plugin/register/tests$', 'GET', auth=False)
 def register_test_plugins(request, response):

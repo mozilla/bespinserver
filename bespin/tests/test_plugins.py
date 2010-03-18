@@ -40,7 +40,7 @@ from path import path
 from simplejson import loads
 
 from bespin import config, plugins, controllers
-from bespin.database import User, Base
+from bespin.database import User, Base, EventLog, _get_session
 from bespin.filesystem import get_project
 
 from __init__ import BespinTestApp
@@ -211,6 +211,14 @@ def test_user_installed_plugins():
     assert "MyPlugin" in response.body
     assert "BiggerPlugin" in response.body
     assert "EditablePlugin" in response.body
+    
+    data = loads(response.body)
+    assert len(data) == 3
+    s = _get_session()
+    sel = EventLog.select().where(EventLog.c.kind=='userplugin')
+    result = s.connection().execute(sel).fetchall()
+    assert len(result) == 2
+    assert result[-1].details == '3'
     
     response = app.get("/getscript/file/at/BespinSettings/plugins/MyPlugin.js%3A")
     assert response.content_type == "text/javascript"

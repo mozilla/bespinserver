@@ -48,7 +48,7 @@ from pathutils import LockError as PULockError, Lock, LockFile
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import (Column, PickleType, String, Integer,
                     Boolean, ForeignKey, Binary,
-                    DateTime, Text)
+                    DateTime, Text, Table)
 from sqlalchemy.orm import relation
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.schema import UniqueConstraint
@@ -185,6 +185,7 @@ class User(Base):
             file_location = "/".join(file_location[:levels]) + "/" + file_location
 
         self.file_location = file_location
+        log_event("newuser", self)
 
     def __str__(self):
         return "User[%s id=%s]" % (self.username, self.id)
@@ -748,3 +749,35 @@ class EveryoneSharing(Base):
     @property
     def invited_name(self):
         return 'everyone'
+
+EventLog = Table('eventlog', Base.metadata, 
+    Column('ts', DateTime, default=datetime.now),
+    Column('kind', String(10)),
+    Column('username', String(128), default=None),
+    Column('details', String, default=None),
+    mysql_engine='archive'
+)
+
+def log_event(kind, user, details=None):
+    """Logs an event to the EventLog.
+    
+    kind: a 10 character or less string of the event type
+    user: the current user (or None),
+    details: a JSON-encodable object with any details that need to
+    be saved with this event."""
+    if user:
+        username = user.username
+    else:
+        username = None
+    
+    if details is not None:
+        details = simplejson.dumps(details)
+    else:
+        details = None
+        
+    ins = EventLog.insert().values(kind=kind, username=username,
+        details=details)
+    session = _get_session()
+    conn = session.connection()
+    conn.execute(ins)
+    

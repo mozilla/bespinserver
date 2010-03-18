@@ -38,7 +38,7 @@
 import simplejson
 
 from bespin import config, controllers, auth
-from bespin.database import User, Base, ConflictError
+from bespin.database import User, Base, ConflictError, EventLog
 from bespin.filesystem import get_project
 
 from bespin.tests import BespinTestApp
@@ -72,6 +72,8 @@ def test_create_new_user():
     assert len(user.uuid) == 36
     num_users = s.query(User).count()
     assert num_users == 1
+    result = s.connection().execute(EventLog.select()).fetchall()
+    assert len(result) == 1
     
     users = User.find_by_email("bill@bixby.com")
     assert users[0].username == "BillBixby"
