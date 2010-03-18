@@ -325,9 +325,9 @@ def file_list(request, response):
         if project:
             project = get_project(user, owner, project)
 
-        files = project.list_files(path)
+        project_files = project.list_files(path)
 
-        for item in files:
+        for item in project_files:
             reply = { 'name':item.short_name }
             _populate_stats(item, reply)
             files.append(reply)
