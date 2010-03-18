@@ -303,18 +303,18 @@ def deletefile(request, response):
     return response()
 
 @expose(r'^/file/list/(?P<path>.*)$', 'GET')
-def listfiles(request, response):
+def file_list(request, response):
     user = request.user
     path = request.kwargs['path']
-    result = []
+    files = []
 
     if not path:
         projects = request.user.get_all_projects(True)
         for project in projects:
             if project.owner == user:
-                result.append({ 'name':project.short_name })
+                files.append({ 'name':project.short_name })
             else:
-                result.append({ 'name':project.owner.username + "+" + project.short_name })
+                files.append({ 'name':project.owner.username + "+" + project.short_name })
     else:
         try:
             owner, project, path = _split_path(request)
@@ -330,9 +330,37 @@ def listfiles(request, response):
         for item in files:
             reply = { 'name':item.short_name }
             _populate_stats(item, reply)
-            result.append(reply)
+            files.append(reply)
 
-    return _respond_json(response, result)
+    return _respond_json(response, files)
+
+@expose(r'^/file/list_all/(?P<path>.*)$', 'GET')
+def file_list_all(request, response):
+    user = request.user
+    path = request.kwargs['path']
+    files = []
+
+    if not path:
+        projects = request.user.get_all_projects(True)
+        for project in projects:
+            if project.owner == user:
+                pname = project.short_name
+            else:
+                pname = project.owner.username + "+" + project.short_name
+            metadata = project.metadata
+            files.extend({ 'name':pname + "/" + name } 
+                for name in metadata.get_file_list())
+            metadata.close()
+    else:
+        owner, project_name, path = _split_path(request)
+    
+        project = get_project(user, user, project_name)
+        metadata = project.metadata
+
+        files.extend({ 'name':name } for name in metadata.get_file_list(path))
+        metadata.close()
+    
+    return _respond_json(response, files)
 
 @expose(r'^/project/template/(?P<project_name>.*)/$', 'POST')
 def install_template(request, response):
@@ -377,34 +405,6 @@ def install_file_template(request, response):
     response.body = ""
     response.content_type = "text/plain"
     return response()
-
-@expose(r'^/file/list_all/(?P<path>.*)$', 'GET')
-def file_list_all(request, response):
-    user = request.user
-    
-    path = request.kwargs['path']
-    if not path:
-        projects = request.user.get_all_projects(True)
-        files = []
-        for project in projects:
-            if project.owner == user:
-                pname = project.short_name
-            else:
-                pname = project.owner.username + "+" + project.short_name
-            metadata = project.metadata
-            files.extend(pname + "/" + name 
-                for name in metadata.get_file_list())
-            metadata.close()
-    else:
-        owner, project_name, path = _split_path(request)
-    
-        project = get_project(user, user, project_name)
-        metadata = project.metadata
-
-        files = metadata.get_file_list(path)
-        metadata.close()
-    
-    return _respond_json(response, files)
 
 @expose(r'^/file/search/(?P<project_name>.*)$', 'GET')
 def file_search(request, response):
