@@ -588,9 +588,9 @@ def broadcast(request, response):
         text = request.POST['text']
     except KeyError:
         text = "*UNSPECIFIED*"
-    followers = user.users_following_me()
-    for follower in followers:
-        follower.publish({
+    connections = user.users_following_me()
+    for connection in connections:
+        connection.following.publish({
             "msgtargetid": "42",
             "from": user.username,
             "text": text
