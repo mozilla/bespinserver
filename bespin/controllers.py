@@ -348,7 +348,7 @@ def file_list_all(request, response):
             else:
                 pname = project.owner.username + "+" + project.short_name
             metadata = project.metadata
-            files.extend({ 'name':pname + "/" + name } 
+            files.extend({ 'name':pname + name } 
                 for name in metadata.get_file_list())
             metadata.close()
     else:

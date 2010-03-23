@@ -233,7 +233,8 @@ def set_profile(profile):
         client_plugin_path = path.getcwd() / ".." / "bespinclient" / "plugins"
         
         c.plugin_path = [dict(name="supported", 
-                    path=client_plugin_path / "supported")]
+                    path=client_plugin_path / "supported"),
+                    dict(name="labs", path=client_plugin_path / "labs")]
         c.test_plugin_path = [dict(name="testing", path=client_plugin_path / "testing")]
         
         c.plugin_path.extend(c.test_plugin_path)
