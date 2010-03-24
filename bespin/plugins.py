@@ -36,12 +36,14 @@
 # 
 import os
 from urlparse import urlparse
+import time
 
 from dryice.plugins import (Plugin as BasePlugin,
                                  find_plugins as base_find_plugins,
                                  lookup_plugin as base_lookup_plugin)
 
 from bespin import config
+from bespin import VERSION
 
 class PluginError(Exception):
     pass
@@ -63,10 +65,11 @@ class Plugin(BasePlugin):
                     id="%s:%s" % (name, scriptname))
                     for scriptname in self.scripts
                 ]
+            version_stamp = int(time.time()) if not "version" in md else md['version']
             md['stylesheets'] = [
-                dict(url="%sfile/at/%s%%3A%s" % (
+                dict(url="%sfile/at/%s%%3A%s?%s" % (
                     server_base_url, self.relative_location, 
-                    stylesheet),
+                    stylesheet, version_stamp),
                     id="%s:%s" % (name, stylesheet))
                 for stylesheet in self.stylesheets
             ]
@@ -84,10 +87,12 @@ class Plugin(BasePlugin):
                     id="%s:%s" % (name, scriptname))
                     for scriptname in self.scripts
                 ]
+            
+            version_stamp = int(time.time()) if VERSION == "tip" else VERSION
             md['stylesheets'] = [
-                dict(url="%splugin/file/%s/%s/%s" % (
+                dict(url="%splugin/file/%s/%s/%s?%s" % (
                     server_base_url, self.location_name, name, 
-                    stylesheet),
+                    stylesheet, version_stamp),
                     id="%s:%s" % (name, stylesheet))
                 for stylesheet in self.stylesheets
             ]
