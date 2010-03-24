@@ -584,14 +584,12 @@ def unfollow(request, response):
 @expose(r'^/network/broadcast/', 'POST')
 def broadcast(request, response):
     user = request.user
-    try:
-        text = request.POST['text']
-    except KeyError:
-        text = "*UNSPECIFIED*"
+    post = simplejson.loads(urllib.unquote(request.body))
+    text = post["text"] or "*unspecified*"
     connections = user.users_following_me()
     for connection in connections:
         connection.following.publish({
-            "msgtargetid": "42",
+            "msgtargetid": "broadcast",
             "from": user.username,
             "text": text
         })
@@ -945,11 +943,45 @@ def get_ssh_key(request, response):
     response.body = pubkey
     return response()
 
+def ask_mobwrite(question, user):
+    """Handle a request for mobwrite synchronization.
+
+    We talk to mobwrite either in-process for development or using a socket
+    which would be more common in live."""
+    if not question:
+        return ""
+
+    c.stats.incr("mobwrite_DATE")
+    question = "H:" + str(user.username) + "\n" + question
+
+    # Java: Class.forName(...) There *has* to be a better way in python?
+    if c.mobwrite_implementation == "MobwriteInProcess":
+        worker = MobwriteInProcess()
+    if c.mobwrite_implementation == "MobwriteTelnetProxy":
+        worker = MobwriteTelnetProxy()
+    if c.mobwrite_implementation == "MobwriteHttpProxy":
+        worker = MobwriteHttpProxy()
+
+    #log.debug("\n\nQUESTION:\n" + question);
+    answer = worker.processRequest(question)
+    #log.debug("\nANSWER:\n" + answer + "\n");
+
+    return answer
+
 @expose("^/messages/$", 'POST')
 def messages(request, response):
     c.stats.incr("messages_DATE")
     user = request.user
-    body = u"[" + ",".join(user.pop_messages()) + "]"
+    if user is None:
+        body = u"[]"
+    else:
+        question = urllib.unquote(request.body)
+        answer = ask_mobwrite(question, user)
+        body = u"[" + ",".join(user.pop_messages()) + "," + simplejson.dumps({
+                "msgtargetid": "mobwrite",
+                "from": user.username,
+                "text": answer
+            }) + "]"
 
     response.content_type = "application/json"
     response.body = body.encode("utf8")
