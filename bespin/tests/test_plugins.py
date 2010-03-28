@@ -114,10 +114,10 @@ def test_install_tarball_plugin():
     plugin = plugins.install_plugin(open(mfp), "http://somewhere/file.tgz", 
                                     settings_project, path_entry, "APlugin")
     
-    plugin_info = destination / "APlugin" / "plugin.json"
+    plugin_info = destination / "APlugin" / "package.json"
     assert plugin_info.exists()
-    dep = plugin.metadata['depends']
-    assert dep[0] == 'plugin2'
+    dep = plugin.metadata['dependencies']
+    assert dep['plugin2'] == '0.0'
     user_location = plugin.metadata['userLocation']
     assert user_location == "BespinSettings/plugins/APlugin/"
     
@@ -130,10 +130,10 @@ def test_install_zipfile_plugin():
     plugin = plugins.install_plugin(open(mfp), "http://somewhere/file.zip", 
                                     settings_project, path_entry, "APlugin")
     
-    plugin_info = destination / "APlugin" / "plugin.json"
+    plugin_info = destination / "APlugin" / "package.json"
     assert plugin_info.exists()
-    dep = plugin.metadata['depends']
-    assert dep[0] == 'plugin2'
+    dep = plugin.metadata['dependencies']
+    assert dep['plugin2'] == '0.0'
     
 # Web tests
 
@@ -187,7 +187,7 @@ def test_user_installed_plugins():
     sfp = (path(__file__).dirname() / "plugindir").abspath() / "SingleFilePlugin1.js"
     sfp_content = sfp.text()
     response = app.put("/file/at/BespinSettings/plugins/MyPlugin.js", sfp_content)
-    response = app.put("/file/at/BespinSettings/plugins/BiggerPlugin/plugin.json", "{}");
+    response = app.put("/file/at/BespinSettings/plugins/BiggerPlugin/package.json", "{}");
     response = app.put("/file/at/BespinSettings/plugins/BiggerPlugin/somedir/script.js", 
         "exports.foo = 1;\n")
     response = app.get("/plugin/register/user")
@@ -201,7 +201,7 @@ def test_user_installed_plugins():
     md = data["BiggerPlugin"]
     assert md["resourceURL"] == "/server/file/at/BespinSettings/plugins/BiggerPlugin/resources/"
     
-    response = app.put("/file/at/myplugins/EditablePlugin/plugin.json", "{}")
+    response = app.put("/file/at/myplugins/EditablePlugin/package.json", "{}")
     response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
 "path": ["myplugins/"],
 "pluginOrdering": ["EditablePlugin"]
@@ -236,4 +236,4 @@ def test_plugin_reload():
     print response.body
     assert '"plugin2": {' in response.body
     # just need the plugin, not its dependents
-    assert '"depends": ["plugin2"]' not in response.body
+    assert '"dependencies": {"plugin2": "0.0"}' not in response.body
