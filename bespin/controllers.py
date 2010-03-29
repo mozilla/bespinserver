@@ -977,11 +977,13 @@ def messages(request, response):
     else:
         question = urllib.unquote(request.body)
         answer = ask_mobwrite(question, user)
-        body = u"[" + ",".join(user.pop_messages()) + "," + simplejson.dumps({
-                "msgtargetid": "mobwrite",
-                "from": user.username,
-                "text": answer
-            }) + "]"
+        msgs = [msg for msg in user.pop_messages()]
+        msgs.append({
+            "msgtargetid": "mobwrite",
+            "from": user.username,
+            "text": answer
+        })
+        body = simplejson.dumps(msgs)
 
     response.content_type = "application/json"
     response.body = body.encode("utf8")

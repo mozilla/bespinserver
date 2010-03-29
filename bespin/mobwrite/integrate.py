@@ -63,7 +63,7 @@ class Persister:
         """Load a temporary file by extracting the project from the filename
         and calling project.get_temp_file"""
         try:
-            (project, path) = self._split(name)
+            (owner, project, path) = self._split_path(name)
             log.debug("loading temp file for: %s/%s" % (project.name, path))
             bytes = project.get_temp_file(path)
             # mobwrite gets things into unicode by doing bytes.encode("utf-8")
@@ -80,7 +80,7 @@ class Persister:
         """Load a temporary file by extracting the project from the filename
         and calling project.save_temp_file"""
         try:
-            (project, path) = self._split(name)
+            (owner, project, path) = self._split_path(name)
             log.debug("saving to temp file for: %s/%s" % (project.name, path))
             project.save_temp_file(path, contents)
         except:
@@ -92,11 +92,12 @@ class Persister:
         Note that if user==owner then no check of project_name is performed, and
         Access.ReadWrite is returned straight away"""
         try:
-            (user_name, project_name, path) = name.split("/", 2)
+            (owner, project_name, path) = self._split_path(name)
 
             requester = get_username_from_handle(handle)
             user = User.find_user(requester)
-            owner = User.find_user(user_name)
+            if not owner:
+                owner = user
 
             if user == owner:
                 return Access.ReadWrite
@@ -112,10 +113,12 @@ class Persister:
                             name, handle)
             return Access.Denied
 
-    def _split(self, name):
-        """Cut a name into the username, projectname, path parts and lookup
-        a project under the given user"""
-        (user_name, project_name, path) = name.split("/", 2)
-        user = User.find_user(user_name)
-        project = get_project(user, user, project_name)
-        return (project, path)
+    def _split_path(self, path):
+        result = path.split('/', 1)
+        parts = result[0].partition('+')
+        if parts[1] == '':
+            result.insert(0, None)
+        else:
+            result.insert(0, User.find_user(parts[0]))
+            result[1] = parts[2]
+        return result
