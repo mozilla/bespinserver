@@ -780,4 +780,13 @@ def log_event(kind, user, details=None):
     session = _get_session()
     conn = session.connection()
     conn.execute(ins)
+
+class Gallery(Base):
+    """Plugin Gallery entries"""
+    __tablename__ = "gallery"
     
+    id = Column(Integer, primary_key=True)
+    owner_id=Column(Integer, ForeignKey('users.id', ondelete="cascade"))
+    name=Column(String(128))
+    version=Column(String(30))
+    packageInfo=Column(PickleType())

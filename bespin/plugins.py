@@ -35,6 +35,7 @@
 # ***** END LICENSE BLOCK *****
 # 
 import os
+import re
 from urlparse import urlparse
 import time
 
@@ -47,6 +48,67 @@ from bespin import VERSION
 
 class PluginError(Exception):
     pass
+
+_required_fields = set(["name", "description", "version", "licenses"])
+_upper_case = re.compile("[A-Z]")
+_beginning_letter = re.compile("^[a-zA-Z]")
+_illegal_characters = re.compile(r"[^\w\._\-]")
+_semver1 = re.compile(r"^\d+[A-Za-z0-9\-]*$")
+_semver2 = re.compile(r"^\d+\.\d+[A-Za-z0-9\-]*$")
+_semver3 = re.compile(r"^\d+\.\d+\.\d+[A-Za-z0-9\-]*$")
+
+def _validate_metadata(metadata):
+    """Ensures that plugin metadata is valid for inclusion in the
+    Gallery."""
+    errors = set([])
+    for field in _required_fields:
+        if field not in metadata:
+            errors.add("%s is required" % (field))
+
+    try:
+        name = metadata['name']
+        if _upper_case.search(name):
+            errors.add("name must be lower case")
+        if not _beginning_letter.search(name):
+            errors.add("name must begin with a letter")
+        if _illegal_characters.search(name):
+            errors.add("name may only contain letters, numbers, '.', '_' and '-'")
+    except KeyError:
+        pass
+    
+    try:
+        version = metadata['version']
+        if  not _semver1.match(version) and not _semver2.match(version) \
+            and not _semver3.match(version):
+            errors.add("version should be of the form X(.Y)(.Z)(alpha/beta/etc) http://semver.org")
+    except KeyError:
+        pass
+    
+    try:
+        keywords = metadata['keywords']
+        if not isinstance(keywords, list):
+            errors.add("keywords should be an array of strings")
+        else:
+            for kw in keywords:
+                if not isinstance(kw, basestring):
+                    errors.add("keywords should be an array of strings")
+                    break
+    except KeyError:
+        pass
+    
+    try:
+        licenses = metadata['licenses']
+        if not isinstance(licenses, list):
+            errors.add("licenses should be an array of objects http://semver.org")
+        else:
+            for l in licenses:
+                if not isinstance(l, dict):
+                    errors.add("licenses should be an array of objects http://semver.org")
+                    break
+    except KeyError:
+        pass
+        
+    return errors
 
 class Plugin(BasePlugin):
     def load_metadata(self):
@@ -147,4 +209,7 @@ def install_plugin(f, url, settings_project, path_entry, plugin_name=None):
     
     plugin = Plugin(plugin_name, destination, path_entry)
     return plugin
+    
+def saveToGallery(user, location):
+    pass
     

@@ -251,6 +251,7 @@ def load_pyconfig(configfile):
     print(c.fsroot)
 
 def activate_profile():
+    
     if c.server_base_url and not c.server_base_url.endswith("/"):
         c.server_base_url += "/"
         
@@ -285,7 +286,9 @@ def activate_profile():
         
     c.dbengine = create_engine(c.dburl, **engine_options)
     c.session_factory = scoped_session(sessionmaker(bind=c.dbengine))
+
     c.fsroot = path(c.fsroot)
+    c.gallery_root = c.fsroot / "gallery"
 
     c.static_dir = path(c.static_dir)
 

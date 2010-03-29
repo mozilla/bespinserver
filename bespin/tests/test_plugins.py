@@ -237,3 +237,78 @@ def test_plugin_reload():
     assert '"plugin2": {' in response.body
     # just need the plugin, not its dependents
     assert '"dependencies": {"plugin2": "0.0"}' not in response.body
+
+good_metadata = dict(
+    name="foo9.27_bar",
+    description="Bar. Baz bing!",
+    version="1.0",
+    licenses=[dict(url="http://bar")]
+)
+
+def test_plugin_metadata_validation():
+    vm = plugins._validate_metadata
+    result = vm({})
+    assert "name is required" in result
+    assert "description is required" in result
+    assert "version is required" in result
+    assert "licenses is required" in result
+    
+    result = vm(good_metadata)
+    assert result == set()
+    
+    data = dict(good_metadata)
+    data['name'] = "FOO"
+    result = vm(data)
+    assert result == set(["name must be lower case"])
+    
+    data['name'] = "9foo"
+    result = vm(data)
+    assert result == set(["name must begin with a letter"])
+    
+    data['name'] = "foo bar"
+    result = vm(data)
+    assert result == set(["name may only contain letters, numbers, '.', '_' and '-'"])
+    
+    data = dict(good_metadata)
+    data['version'] = "hi there"
+    result = vm(data)
+    assert result == set(["version should be of the form X(.Y)(.Z)(alpha/beta/etc) http://semver.org"])
+    
+    data['version'] = "1"
+    result = vm(data)
+    assert result == set()
+    
+    data['version'] = "1.0beta"
+    result = vm(data)
+    assert result == set()
+    
+    data['version'] = "1.0.1alpha2"
+    result = vm(data)
+    assert result == set()
+    
+    data['version'] = "1.0.1not valid"
+    result = vm(data)
+    assert result == set(["version should be of the form X(.Y)(.Z)(alpha/beta/etc) http://semver.org"])
+    
+    data = dict(good_metadata)
+    data['keywords'] = ["this", "is", "a", "good", "one"]
+    result = vm(data)
+    assert result == set()
+    
+    data['keywords'] = "foo"
+    result = vm(data)
+    assert result == set(["keywords should be an array of strings"])
+    
+    data['keywords'] = [dict(hi="there")]
+    result = vm(data)
+    assert result == set(["keywords should be an array of strings"])
+    
+    data = dict(good_metadata)
+    data['licenses'] = "GPL"
+    result = vm(data)
+    assert result == set(["licenses should be an array of objects http://semver.org"])
+    
+    data['licenses'] = ["GPL"]
+    result = vm(data)
+    assert result == set(["licenses should be an array of objects http://semver.org"])
+    
