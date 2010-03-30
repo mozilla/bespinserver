@@ -1,3 +1,13 @@
 {
-    "depends": ["plugin2"]
+    "name": "plugin1",
+    "description": "plugin the first.",
+    "version": "0.9",
+    "licenses": [
+        {
+            "type": "MPL"
+        }
+    ],
+    "dependencies": {
+        "plugin2": "1.0"
+    }
 }

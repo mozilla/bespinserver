@@ -1,3 +1,10 @@
 {
-    
+    "name": "plugin2",
+    "description": "second plugin.",
+    "licenses": [
+        {
+            "type": "MPL"
+        }
+    ],
+    "version": "1.0.1"
 }

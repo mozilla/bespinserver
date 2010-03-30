@@ -40,7 +40,7 @@ from path import path
 from simplejson import loads
 
 from bespin import config, plugins, controllers
-from bespin.database import User, Base, EventLog, _get_session
+from bespin.database import User, Base, EventLog, _get_session, GalleryPlugin
 from bespin.filesystem import get_project
 
 from __init__ import BespinTestApp
@@ -311,4 +311,92 @@ def test_plugin_metadata_validation():
     data['licenses'] = ["GPL"]
     result = vm(data)
     assert result == set(["licenses should be an array of objects http://semver.org"])
+    
+    data = dict(good_metadata)
+    data['depends'] = ["foo"]
+    result = vm(data)
+    assert result == set(["'depends' is not longer supported. use dependencies."])
+    
+    data = dict(good_metadata)
+    data['dependencies'] = ['foo']
+    result = vm(data)
+    assert result == set(['dependencies should be a dictionary'])
+    
+    data['dependencies'] = dict(foo="bar")
+    result = vm(data)
+    assert result == set(["'bar' is not a valid version for dependency 'foo'"])
+    
+    data['dependencies'] = dict(foo="1.0.0")
+    result = vm(data)
+    assert result == set()
+    
+    data['depedencies'] = dict(foo=["1.0", "2.0"])
+    result = vm(data)
+    assert result == set()
+    
+    data['dependencies'] = dict(foo = ["invalid"])
+    result = vm(data)
+    assert result == set(["'invalid' is not a valid version for dependency 'foo'"])
+    
+    
+def test_save_plugin_without_enough_metadata():
+    try:
+        plugins.save_to_gallery(macgyver, plugindir / "SingleFilePlugin1.js")
+        assert False, "Expected to get an exception when saving a plugin without enough metadata"
+    except plugins.PluginError:
+        pass
+    
+def test_save_plugin_good():
+    _init_data()
+    gallery_root = config.c.gallery_root
+    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    
+    plugin1_dir = gallery_root / "plugin1"
+    assert plugin1_dir.exists()
+    version_dir = plugin1_dir / "0.9"
+    assert version_dir.exists()
+    assert version_dir.isdir()
+    package_info = version_dir / "package.json"
+    assert package_info.exists()
+    
+    s = config.c.session_factory()
+    s.commit()
+    s.clear()
+    
+    num_plugins = s.query(GalleryPlugin).count()
+    assert num_plugins == 1
+    plugin = s.query(GalleryPlugin).first()
+    assert plugin.name == "plugin1"
+    assert plugin.version == "0.9"
+    assert plugin.packageInfo['description'] == "plugin the first."
+    
+def test_save_single_file_plugin_to_gallery():
+    _init_data()
+    gallery_root = config.c.gallery_root
+    plugins.save_to_gallery(macgyver, plugindir / "SingleFilePlugin3.js")
+    
+    sfp3_dir = gallery_root / "singlefileplugin3"
+    assert sfp3_dir.exists()
+    version_file = sfp3_dir / "2.3.2.js"
+    assert version_file.exists()
+    assert not version_file.isdir()
+    
+def test_plugin_upload_from_the_web():
+    _init_data()
+    _init_data()
+    sfp = (path(__file__).dirname() / "plugindir").abspath() / "SingleFilePlugin3.js"
+    sfp_content = sfp.text()
+    response = app.put("/file/at/myplugins/singlefileplugin3.js", sfp_content)
+    response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
+"plugins": ["myplugins/singlefileplugin3.js"],
+"pluginOrdering": ["singlefileplugin3"]
+}""")
+    response = app.post("/plugin/upload/singlefileplugin3")
+    assert response.body == "OK"
+    
+    s = config.c.session_factory()
+    num_plugins = s.query(GalleryPlugin).count()
+    assert num_plugins == 1
+    plugin = s.query(GalleryPlugin).first()
+    assert plugin.name == "singlefileplugin3"
     

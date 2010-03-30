@@ -781,12 +781,26 @@ def log_event(kind, user, details=None):
     conn = session.connection()
     conn.execute(ins)
 
-class Gallery(Base):
+class GalleryPlugin(Base):
     """Plugin Gallery entries"""
     __tablename__ = "gallery"
     
     id = Column(Integer, primary_key=True)
     owner_id=Column(Integer, ForeignKey('users.id', ondelete="cascade"))
-    name=Column(String(128))
+    name=Column(String(128), unique=True)
     version=Column(String(30))
     packageInfo=Column(PickleType())
+    
+    def __init__(self, owner, name):
+        self.owner_id = owner.id
+        self.name = name
+    
+    @classmethod
+    def get_plugin(cls, user, name):
+        s = _get_session()
+        plugin = s.query(cls).filter_by(name=name).first()
+        if not plugin:
+            plugin = cls(user, name)
+            s.add(plugin)
+            return plugin
+        

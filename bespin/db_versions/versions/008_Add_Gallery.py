@@ -35,7 +35,7 @@ class Gallery(Base):
     
     id = Column(Integer, primary_key=True)
     owner_id=Column(Integer, ForeignKey('users.id', ondelete="cascade"))
-    name=Column(String(128))
+    name=Column(String(128), unique=True)
     version=Column(String(30))
     packageInfo=Column(PickleType())
 

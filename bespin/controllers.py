@@ -1182,6 +1182,22 @@ def reload_plugin(request, response):
     plugin = plugins.lookup_plugin(plugin_name, path)
     
     return _plugin_response(response, plugin_list=[plugin])
+
+@expose(r'^/plugin/upload/(?P<plugin_name>.+)', 'POST')
+def upload_plugin(request, response):
+    plugin_name = request.kwargs['plugin_name']
+    if ".." in plugin_name:
+        raise BadRequest("'..' not allowed in plugin names")
+    path = _get_user_plugin_path(request)
+    plugin = plugins.lookup_plugin(plugin_name, path)
+    if not plugin:
+        raise plugins.PluginError("Cannot find plugin %s" % plugin_name)
+    if plugin.location_name != "user":
+        raise BadRequest("Only user-editable plugins can be uploaded")
+    plugins.save_to_gallery(request.user, plugin.location)
+    response.content_type = "text/plain"
+    response.body = "OK"
+    return response()
     
 def _wrap_script(plugin_name, script_path, script_text):
     if script_path:

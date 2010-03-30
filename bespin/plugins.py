@@ -41,74 +41,15 @@ import time
 
 from dryice.plugins import (Plugin as BasePlugin,
                                  find_plugins as base_find_plugins,
-                                 lookup_plugin as base_lookup_plugin)
+                                 lookup_plugin as base_lookup_plugin,
+                                 get_metadata)
 
 from bespin import config
 from bespin import VERSION
+from bespin.database import GalleryPlugin
 
 class PluginError(Exception):
     pass
-
-_required_fields = set(["name", "description", "version", "licenses"])
-_upper_case = re.compile("[A-Z]")
-_beginning_letter = re.compile("^[a-zA-Z]")
-_illegal_characters = re.compile(r"[^\w\._\-]")
-_semver1 = re.compile(r"^\d+[A-Za-z0-9\-]*$")
-_semver2 = re.compile(r"^\d+\.\d+[A-Za-z0-9\-]*$")
-_semver3 = re.compile(r"^\d+\.\d+\.\d+[A-Za-z0-9\-]*$")
-
-def _validate_metadata(metadata):
-    """Ensures that plugin metadata is valid for inclusion in the
-    Gallery."""
-    errors = set([])
-    for field in _required_fields:
-        if field not in metadata:
-            errors.add("%s is required" % (field))
-
-    try:
-        name = metadata['name']
-        if _upper_case.search(name):
-            errors.add("name must be lower case")
-        if not _beginning_letter.search(name):
-            errors.add("name must begin with a letter")
-        if _illegal_characters.search(name):
-            errors.add("name may only contain letters, numbers, '.', '_' and '-'")
-    except KeyError:
-        pass
-    
-    try:
-        version = metadata['version']
-        if  not _semver1.match(version) and not _semver2.match(version) \
-            and not _semver3.match(version):
-            errors.add("version should be of the form X(.Y)(.Z)(alpha/beta/etc) http://semver.org")
-    except KeyError:
-        pass
-    
-    try:
-        keywords = metadata['keywords']
-        if not isinstance(keywords, list):
-            errors.add("keywords should be an array of strings")
-        else:
-            for kw in keywords:
-                if not isinstance(kw, basestring):
-                    errors.add("keywords should be an array of strings")
-                    break
-    except KeyError:
-        pass
-    
-    try:
-        licenses = metadata['licenses']
-        if not isinstance(licenses, list):
-            errors.add("licenses should be an array of objects http://semver.org")
-        else:
-            for l in licenses:
-                if not isinstance(l, dict):
-                    errors.add("licenses should be an array of objects http://semver.org")
-                    break
-    except KeyError:
-        pass
-        
-    return errors
 
 class Plugin(BasePlugin):
     def load_metadata(self):
@@ -210,6 +151,125 @@ def install_plugin(f, url, settings_project, path_entry, plugin_name=None):
     plugin = Plugin(plugin_name, destination, path_entry)
     return plugin
     
-def saveToGallery(user, location):
-    pass
+    
+
+# Plugin Gallery functionality
+
+_required_fields = set(["name", "description", "version", "licenses"])
+_upper_case = re.compile("[A-Z]")
+_beginning_letter = re.compile("^[a-zA-Z]")
+_illegal_characters = re.compile(r"[^\w\._\-]")
+_semver1 = re.compile(r"^\d+[A-Za-z0-9\-]*$")
+_semver2 = re.compile(r"^\d+\.\d+[A-Za-z0-9\-]*$")
+_semver3 = re.compile(r"^\d+\.\d+\.\d+[A-Za-z0-9\-]*$")
+
+def _validate_version_string(version):
+    if  not _semver1.match(version) and not _semver2.match(version) \
+        and not _semver3.match(version):
+        return False
+    return True
+
+def _validate_metadata(metadata):
+    """Ensures that plugin metadata is valid for inclusion in the
+    Gallery."""
+    errors = set([])
+    for field in _required_fields:
+        if field not in metadata:
+            errors.add("%s is required" % (field))
+
+    try:
+        name = metadata['name']
+        if _upper_case.search(name):
+            errors.add("name must be lower case")
+        if not _beginning_letter.search(name):
+            errors.add("name must begin with a letter")
+        if _illegal_characters.search(name):
+            errors.add("name may only contain letters, numbers, '.', '_' and '-'")
+    except KeyError:
+        pass
+    
+    try:
+        version = metadata['version']
+        if not _validate_version_string(version):
+            errors.add("version should be of the form X(.Y)(.Z)(alpha/beta/etc) http://semver.org")
+    except KeyError:
+        pass
+    
+    try:
+        keywords = metadata['keywords']
+        if not isinstance(keywords, list):
+            errors.add("keywords should be an array of strings")
+        else:
+            for kw in keywords:
+                if not isinstance(kw, basestring):
+                    errors.add("keywords should be an array of strings")
+                    break
+    except KeyError:
+        pass
+    
+    try:
+        licenses = metadata['licenses']
+        if not isinstance(licenses, list):
+            errors.add("licenses should be an array of objects http://semver.org")
+        else:
+            for l in licenses:
+                if not isinstance(l, dict):
+                    errors.add("licenses should be an array of objects http://semver.org")
+                    break
+    except KeyError:
+        pass
+    
+    if "depends" in metadata:
+        errors.add("'depends' is not longer supported. use dependencies.")
+    
+    try:
+        dependencies = metadata['dependencies']
+        if not isinstance(dependencies, dict):
+            errors.add('dependencies should be a dictionary')
+        else:
+            for dependName, info in dependencies.items():
+                if isinstance(info, basestring):
+                    if not _validate_version_string(info):
+                        errors.add("'%s' is not a valid version for dependency '%s'" 
+                                   % (info, dependName))
+                elif isinstance(info, list):
+                    for v in info:
+                        if not _validate_version_string(v):
+                            errors.add("'%s' is not a valid version for dependency '%s'" 
+                                       % (v, dependName))
+                else:
+                    errors.add("'%s' is not a valid version for dependency '%s'"
+                               % (info, dependName))
+                            
+    except KeyError:
+        pass
+        
+    return errors
+
+def save_to_gallery(user, location):
+    """This is how a new plugin or new version of a plugin gets into the
+    gallery. Note that any errors will result in a PluginError exception
+    being raised."""
+    metadata, errors = get_metadata(location)
+    if errors:
+        raise PluginError("Errors found when reading plugin metadata: %s" % (errors,))
+    
+    errors = _validate_metadata(metadata)
+    if errors:
+        raise PluginError("Errors in plugin metadata: %s" % (errors,))
+    
+    plugin = GalleryPlugin.get_plugin(user, metadata['name'])
+    if not plugin.version:
+        plugin.version = metadata['version']
+        plugin.packageInfo = metadata
+    
+    gallery_root = config.c.gallery_root
+    plugin_dir = gallery_root / metadata['name']
+    if not plugin_dir.exists():
+        plugin_dir.makedirs()
+    
+    if location.isdir():
+        location.copytree(plugin_dir / metadata['version'])
+    else:
+        location.copy(plugin_dir / (metadata['version'] + ".js"))
     
