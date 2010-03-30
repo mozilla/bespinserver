@@ -401,7 +401,7 @@ def test_install_plugin_with_dependencies():
     plugins.save_to_gallery(macgyver, plugindir / "plugin1")
     plugins.save_to_gallery(macgyver, plugindir / "plugin2")
     
-    plugins.install_plugin_from_gallery(macgyver, "plugin1")
+    md = plugins.install_plugin_from_gallery(macgyver, "plugin1")
     project = get_project(macgyver, macgyver, "BespinSettings")
     plugin1_dir = project.location / "plugins/plugin1"
     assert plugin1_dir.exists()
@@ -410,6 +410,10 @@ def test_install_plugin_with_dependencies():
     plugin2_dir = project.location / "plugins/plugin2"
     assert plugin2_dir.exists()
     assert plugin2_dir.isdir()
+    
+    assert md['plugin1']['name'] == "plugin1"
+    assert md['plugin1']['version'] == "0.9"
+    assert md['plugin2']['version'] == "1.0.1"
     
 # WEB TESTS
 
@@ -478,7 +482,9 @@ def test_plugin_install_from_gallery():
     plugins.save_to_gallery(macgyver, plugindir / "singlefileplugin3.js")
     
     response = app.post("/plugin/install/singlefileplugin3")
-    assert response.body == "OK"
+    assert response.content_type == "application/json"
+    data = loads(response.body)
+    assert "singlefileplugin3" in data
     
     project = get_project(macgyver, macgyver, "BespinSettings")
     sfp3_dir = project.location / "plugins/singlefileplugin3.js"

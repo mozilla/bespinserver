@@ -336,7 +336,10 @@ def install_plugin_from_gallery(user, plugin_name):
     
     deps = _collect_dependencies(plugin)
     
-    _perform_installation(user, plugin)
+    deps[plugin.name] = plugin
+    
     for dep in deps.values():
         _perform_installation(user, dep)
+    
+    return dict((plugin.name, plugin.package_info) for plugin in deps.values())
     

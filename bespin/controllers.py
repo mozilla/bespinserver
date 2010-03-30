@@ -1251,9 +1251,8 @@ def install_plugin_from_url(request, response):
 @expose(r'^/plugin/install/(?P<name>.*)$', 'POST')
 def install_plugin_from_gallery(request, response):
     plugin_name = request.kwargs["name"]
-    plugins.install_plugin_from_gallery(request.user, plugin_name)
-    response.body = "OK"
-    return response()
+    data = plugins.install_plugin_from_gallery(request.user, plugin_name)
+    return _respond_json(response, data)
     
 
 def db_middleware(app):
