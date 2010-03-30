@@ -1066,7 +1066,7 @@ def register_plugins(request, response):
 
 leading_slash = re.compile("^/")
 
-def _get_user_plugin_path(request):
+def _get_user_plugin_path(request, include_installed=True):
     user = request.user
     if not user:
         return []
@@ -1094,9 +1094,10 @@ def _get_user_plugin_path(request):
         pi_path = pluginInfo.get("path", None)
         if pi_path:
             path.extend(dict(name="user", path=root / leading_slash.sub("", p), chop=root_len) for p in pi_path)
-        
-    path.append(dict(name="user", path=project.location / "plugins", 
-        chop=len(user.get_location())))
+    
+    if include_installed:
+        path.append(dict(name="user", path=project.location / "plugins", 
+            chop=len(user.get_location())))
     return path
     
 @expose(r'^/plugin/register/user$', 'GET', auth=True)
@@ -1188,10 +1189,10 @@ def upload_plugin(request, response):
     plugin_name = request.kwargs['plugin_name']
     if ".." in plugin_name:
         raise BadRequest("'..' not allowed in plugin names")
-    path = _get_user_plugin_path(request)
+    path = _get_user_plugin_path(request, include_installed=False)
     plugin = plugins.lookup_plugin(plugin_name, path)
     if not plugin:
-        raise plugins.PluginError("Cannot find plugin %s" % plugin_name)
+        raise plugins.PluginError("Cannot find plugin '%s' among user editable plugins" % plugin_name)
     if plugin.location_name != "user":
         raise BadRequest("Only user-editable plugins can be uploaded")
     plugins.save_to_gallery(request.user, plugin.location)

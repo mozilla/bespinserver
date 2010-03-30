@@ -803,4 +803,4 @@ class GalleryPlugin(Base):
             plugin = cls(user, name)
             s.add(plugin)
             return plugin
-        
+        return plugin

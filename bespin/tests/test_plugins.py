@@ -50,10 +50,13 @@ app = None
 plugindir = (path(__file__).dirname() / "plugindir").abspath()
 
 def setup_module():
-    global app
+    global app, app_murdoc
     config.set_profile('test')
     app = controllers.make_app()
     app = BespinTestApp(app)
+    app_murdoc = controllers.make_app()
+    app_murdoc = BespinTestApp(app_murdoc)
+    
 
     config.c.plugin_path = [dict(name="testplugins", path=plugindir, chop=len(plugindir))]
     config.activate_profile()
@@ -76,8 +79,10 @@ def _init_data():
     app.post("/register/new/MacGyver", 
         dict(password="richarddean", email="rich@sg1.com"))
         
-    macgyver = User.find_user("MacGyver")
+    app_murdoc.post("/register/new/Murdoc", 
+        dict(password="murdoc", email="murdoc@badpeople.bad"))
 
+    macgyver = User.find_user("MacGyver")
     
 def test_install_single_file_plugin():
     _init_data()
@@ -383,7 +388,6 @@ def test_save_single_file_plugin_to_gallery():
     
 def test_plugin_upload_from_the_web():
     _init_data()
-    _init_data()
     sfp = (path(__file__).dirname() / "plugindir").abspath() / "SingleFilePlugin3.js"
     sfp_content = sfp.text()
     response = app.put("/file/at/myplugins/singlefileplugin3.js", sfp_content)
@@ -399,4 +403,37 @@ def test_plugin_upload_from_the_web():
     assert num_plugins == 1
     plugin = s.query(GalleryPlugin).first()
     assert plugin.name == "singlefileplugin3"
+    
+    response = app.post("/plugin/upload/singlefileplugin3", status=400)
+    print response.body
+    assert response.body == "singlefileplugin3 version 2.3.2 already exists"
+    
+def test_plugin_upload_wont_replace_builtin_plugin():
+    _init_data()
+    
+    response = app.post("/plugin/upload/Editor", status=400)
+    print response.body
+    assert response.body == "Cannot find plugin 'Editor' among user editable plugins"
+    
+def test_plugin_upload_wont_work_for_someone_elses_plugin():
+    _init_data()
+    
+    sfp = (path(__file__).dirname() / "plugindir").abspath() / "SingleFilePlugin3.js"
+    sfp_content = sfp.text()
+    response = app.put("/file/at/myplugins/singlefileplugin3.js", sfp_content)
+    response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
+"plugins": ["myplugins/singlefileplugin3.js"],
+"pluginOrdering": ["singlefileplugin3"]
+}""")
+    response = app.post("/plugin/upload/singlefileplugin3")
+    assert response.body == "OK"
+    
+    response = app_murdoc.put("/file/at/myplugins/singlefileplugin3.js", sfp_content)
+    response = app_murdoc.put("/file/at/BespinSettings/pluginInfo.json", """{
+"plugins": ["myplugins/singlefileplugin3.js"],
+"pluginOrdering": ["singlefileplugin3"]
+}""")
+    response = app_murdoc.post("/plugin/upload/singlefileplugin3", status=401)
+    print response.body
+    assert response.body == "Plugin 'singlefileplugin3' is owned by another user"
     

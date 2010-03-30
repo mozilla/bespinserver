@@ -47,6 +47,7 @@ from dryice.plugins import (Plugin as BasePlugin,
 from bespin import config
 from bespin import VERSION
 from bespin.database import GalleryPlugin
+from bespin.filesystem import NotAuthorized
 
 class PluginError(Exception):
     pass
@@ -259,9 +260,8 @@ def save_to_gallery(user, location):
         raise PluginError("Errors in plugin metadata: %s" % (errors,))
     
     plugin = GalleryPlugin.get_plugin(user, metadata['name'])
-    if not plugin.version:
-        plugin.version = metadata['version']
-        plugin.packageInfo = metadata
+    if plugin.owner_id != user.id:
+        raise NotAuthorized("Plugin '%s' is owned by another user" % (metadata['name']))
     
     gallery_root = config.c.gallery_root
     plugin_dir = gallery_root / metadata['name']
@@ -269,7 +269,18 @@ def save_to_gallery(user, location):
         plugin_dir.makedirs()
     
     if location.isdir():
-        location.copytree(plugin_dir / metadata['version'])
+        destination = plugin_dir / metadata['version']
+        if destination.exists():
+            raise PluginError("%s version %s already exists" % (metadata['name'],
+                                                                metadata['version']))
+        location.copytree(destination)
     else:
-        location.copy(plugin_dir / (metadata['version'] + ".js"))
+        destination = plugin_dir / (metadata['version'] + ".js")
+        if destination.exists():
+            raise PluginError("%s version %s already exists" % (metadata['name'],
+                                                                metadata['version']))
+        location.copy(destination)
     
+    if not plugin.version:
+        plugin.version = metadata['version']
+        plugin.packageInfo = metadata
