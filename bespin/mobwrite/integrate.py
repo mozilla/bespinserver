@@ -59,11 +59,12 @@ class Access:
 class Persister:
     """A plug-in for mobwrite_daemon that diverts calls to Bespin"""
 
-    def load(self, name):
+    def load(self, name, handle):
         """Load a temporary file by extracting the project from the filename
         and calling project.get_temp_file"""
         try:
-            (owner, project, path) = self._split_path(name)
+            (user, owner, project_name, path) = self._split_path(name, handle)
+            project = get_project(user, owner, project_name)
             log.debug("loading temp file for: %s/%s" % (project.name, path))
             bytes = project.get_temp_file(path)
             # mobwrite gets things into unicode by doing bytes.encode("utf-8")
@@ -76,11 +77,12 @@ class Persister:
             log.exception("Error in Persister.load() for name=%s", name)
             return ""
 
-    def save(self, name, contents):
+    def save(self, name, contents, handle):
         """Load a temporary file by extracting the project from the filename
         and calling project.save_temp_file"""
         try:
-            (owner, project, path) = self._split_path(name)
+            (user, owner, project_name, path) = self._split_path(name, handle)
+            project = get_project(user, owner, project_name)
             log.debug("saving to temp file for: %s/%s" % (project.name, path))
             project.save_temp_file(path, contents)
         except:
@@ -92,13 +94,7 @@ class Persister:
         Note that if user==owner then no check of project_name is performed, and
         Access.ReadWrite is returned straight away"""
         try:
-            (owner, project_name, path) = self._split_path(name)
-
-            requester = get_username_from_handle(handle)
-            user = User.find_user(requester)
-            if not owner:
-                owner = user
-
+            (user, owner, project_name, path) = self._split_path(name, handle)
             if user == owner:
                 return Access.ReadWrite
             if user != owner:
@@ -113,12 +109,18 @@ class Persister:
                             name, handle)
             return Access.Denied
 
-    def _split_path(self, path):
+    def _split_path(self, path, handle):
+        """Extract user, owner, project name, and path and return it as a tuple."""
+        requester = get_username_from_handle(handle)
+        user = User.find_user(requester)
+        if path[0] == "/":
+            path = path[1:]
         result = path.split('/', 1)
         parts = result[0].partition('+')
         if parts[1] == '':
-            result.insert(0, None)
+            result.insert(0, user)
         else:
             result.insert(0, User.find_user(parts[0]))
             result[1] = parts[2]
+        result.insert(0, user)
         return result

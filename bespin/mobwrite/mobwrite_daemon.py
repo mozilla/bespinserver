@@ -91,6 +91,7 @@ class TextObj(mobwrite_core.TextObj):
     # Setup this object
     mobwrite_core.TextObj.__init__(self, *args, **kwargs)
     self.persister = kwargs.get("persister")
+    self.handle = kwargs.get("handle")
     self.views = []
     self.lasttime = datetime.datetime.now()
     self.lock = thread.allocate_lock()
@@ -163,7 +164,7 @@ class TextObj(mobwrite_core.TextObj):
   def load(self):
     # Load the text object from non-volatile storage.
     if STORAGE_MODE == PERSISTER:
-      contents = self.persister.load(self.name)
+      contents = self.persister.load(self.name, self.handle)
       self.setText(contents, justLoaded=True)
       self.changed = False
 
@@ -199,7 +200,7 @@ class TextObj(mobwrite_core.TextObj):
     assert self.lock.locked(), "Can't save unless locked."
 
     if STORAGE_MODE == PERSISTER:
-      self.persister.save(self.name, self.text)
+      self.persister.save(self.name, self.text, self.handle)
       self.changed = False
 
     if STORAGE_MODE == FILE:
@@ -238,7 +239,7 @@ class TextObj(mobwrite_core.TextObj):
       self.changed = False
 
 
-def fetch_textobj(name, view, persister):
+def fetch_textobj(name, view, persister, handle):
   # Retrieve the named text object.  Create it if it doesn't exist.
   # Add the given view into the text object's list of connected views.
   # Don't let two simultaneous creations happen, or a deletion during a
@@ -250,7 +251,7 @@ def fetch_textobj(name, view, persister):
       textobj = texts[name]
       mobwrite_core.LOG.debug("Accepted text: '%s'" % name)
     else:
-      textobj = TextObj(name=name, persister=persister)
+      textobj = TextObj(name=name, persister=persister, handle=handle)
       mobwrite_core.LOG.debug("Creating text: '%s'" % name)
     textobj.views.append(view)
   finally:
@@ -292,7 +293,7 @@ class ViewObj(mobwrite_core.ViewObj):
     self.edit_stack = []
     self.lasttime = datetime.datetime.now()
     self.lock = thread.allocate_lock()
-    self.textobj = fetch_textobj(self.filename, self, kwargs.get("persister"))
+    self.textobj = fetch_textobj(self.filename, self, kwargs.get("persister"), kwargs.get("handle"))
 
     # lock_views must be acquired by the caller to prevent simultaneous
     # creations of the same view.
