@@ -449,3 +449,16 @@ def test_plugin_gallery_list():
     data = loads(response.body)
     assert len(data) == 1
     
+def test_plugin_install_from_gallery():
+    _init_data()
+    gallery_root = config.c.gallery_root
+    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    
+    response = app.post("/plugin/install/plugin1")
+    assert response.body == "OK"
+    
+    project = get_project(macgyver, macgyver, "BespinSettings")
+    plugin1_dir = project.location / "plugins/plugin1"
+    assert plugin1_dir.exists()
+    assert plugin1_dir.isdir()
+    

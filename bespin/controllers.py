@@ -1222,8 +1222,8 @@ def _wrap_script(plugin_name, script_path, script_text):
 
 urlmatch = re.compile(r'^(http|https)://')
 
-@expose(r'^/plugin/install/', 'POST')
-def install_plugin(request, response):
+@expose(r'^/plugin/install/$', 'POST')
+def install_plugin_from_url(request, response):
     """Installs a plugin into the user's BespinSettings/plugins directory."""
     user = request.user
     url = request.POST.get('url')
@@ -1246,6 +1246,13 @@ def install_plugin(request, response):
     plugin_collection[plugin.name] = plugin.metadata
     response.body = simplejson.dumps(plugin_collection)
     response.content_type = "application/json"
+    return response()
+
+@expose(r'^/plugin/install/(?P<name>.*)$', 'POST')
+def install_plugin_from_gallery(request, response):
+    plugin_name = request.kwargs["name"]
+    plugins.install_plugin_from_gallery(request.user, plugin_name)
+    response.body = "OK"
     return response()
     
 

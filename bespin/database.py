@@ -796,10 +796,10 @@ class GalleryPlugin(Base):
         self.name = name
     
     @classmethod
-    def get_plugin(cls, user, name):
+    def get_plugin(cls, name, user=None, create=False):
         s = _get_session()
         plugin = s.query(cls).filter_by(name=name).first()
-        if not plugin:
+        if not plugin and create and user:
             plugin = cls(user, name)
             s.add(plugin)
             return plugin

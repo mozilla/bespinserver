@@ -47,7 +47,7 @@ from dryice.plugins import (Plugin as BasePlugin,
 from bespin import config
 from bespin import VERSION
 from bespin.database import GalleryPlugin
-from bespin.filesystem import NotAuthorized
+from bespin.filesystem import NotAuthorized, get_project
 
 class PluginError(Exception):
     pass
@@ -259,7 +259,7 @@ def save_to_gallery(user, location):
     if errors:
         raise PluginError("Errors in plugin metadata: %s" % (errors,))
     
-    plugin = GalleryPlugin.get_plugin(user, metadata['name'])
+    plugin = GalleryPlugin.get_plugin(metadata['name'], user, create=True)
     if plugin.owner_id != user.id:
         raise NotAuthorized("Plugin '%s' is owned by another user" % (metadata['name']))
     
@@ -284,3 +284,31 @@ def save_to_gallery(user, location):
     if not plugin.version:
         plugin.version = metadata['version']
         plugin.package_info = metadata
+
+def install_plugin_from_gallery(user, plugin_name):
+    plugin = GalleryPlugin.get_plugin(plugin_name)
+    if not plugin:
+        raise PluginError('Cannot find plugin "%s" in the gallery' % (plugin_name))
+    version = plugin.version
+    gallery_root = config.c.gallery_root
+    plugin_dir = gallery_root / plugin.name
+    
+    location = plugin_dir / version
+    if not location.exists():
+        location = plugin_dir / (version + ".js")
+        if not location.exists():
+            raise PluginError("Unable to find the plugin files for '%s' version %s"
+                % (plugin_name, plugin.version))
+    
+    project = get_project(user, user, "BespinSettings")
+    
+    if location.isdir():
+        destination = project.location / "plugins" / plugin.name
+        if destination.exists():
+            destination.rmtree()
+        location.copytree(destination)
+    else:
+        destination = project.location / "plugins" / location.basename()
+        if destination.exists():
+            destination.unlink()
+        location.copy(destination)
