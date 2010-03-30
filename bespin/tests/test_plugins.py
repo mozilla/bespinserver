@@ -373,7 +373,7 @@ def test_save_plugin_good():
     plugin = s.query(GalleryPlugin).first()
     assert plugin.name == "plugin1"
     assert plugin.version == "0.9"
-    assert plugin.packageInfo['description'] == "plugin the first."
+    assert plugin.package_info['description'] == "plugin the first."
     
 def test_save_single_file_plugin_to_gallery():
     _init_data()
@@ -386,6 +386,8 @@ def test_save_single_file_plugin_to_gallery():
     assert version_file.exists()
     assert not version_file.isdir()
     
+# WEB TESTS
+
 def test_plugin_upload_from_the_web():
     _init_data()
     sfp = (path(__file__).dirname() / "plugindir").abspath() / "SingleFilePlugin3.js"
@@ -436,4 +438,14 @@ def test_plugin_upload_wont_work_for_someone_elses_plugin():
     response = app_murdoc.post("/plugin/upload/singlefileplugin3", status=401)
     print response.body
     assert response.body == "Plugin 'singlefileplugin3' is owned by another user"
+    
+def test_plugin_gallery_list():
+    _init_data()
+    gallery_root = config.c.gallery_root
+    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    
+    response = app.get("/plugin/gallery/")
+    assert response.content_type == "application/json"
+    data = loads(response.body)
+    assert len(data) == 1
     

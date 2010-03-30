@@ -57,7 +57,7 @@ from webob import Request, Response
 from bespin.config import c
 from bespin.framework import expose, BadRequest
 from bespin import vcs, deploy
-from bespin.database import User, get_project, log_event
+from bespin.database import User, get_project, log_event, GalleryPlugin
 from bespin.filesystem import NotAuthorized, OverQuota, File, FileNotFound
 from bespin.utils import send_email_template
 from bespin import filesystem, queue, plugins
@@ -1199,6 +1199,16 @@ def upload_plugin(request, response):
     response.content_type = "text/plain"
     response.body = "OK"
     return response()
+
+@expose(r'^/plugin/gallery/$', 'GET')
+def plugin_gallery(request, response):
+    plugins = GalleryPlugin.get_all_plugins()
+    result = []
+    for p in plugins:
+        data = dict(name=p.name, 
+                    description=p.package_info.get('description', ""))
+        result.append(data)
+    return _respond_json(response, result)
     
 def _wrap_script(plugin_name, script_path, script_text):
     if script_path:

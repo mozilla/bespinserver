@@ -789,7 +789,7 @@ class GalleryPlugin(Base):
     owner_id=Column(Integer, ForeignKey('users.id', ondelete="cascade"))
     name=Column(String(128), unique=True)
     version=Column(String(30))
-    packageInfo=Column(PickleType())
+    package_info=Column(PickleType())
     
     def __init__(self, owner, name):
         self.owner_id = owner.id
@@ -804,3 +804,9 @@ class GalleryPlugin(Base):
             s.add(plugin)
             return plugin
         return plugin
+    
+    @classmethod
+    def get_all_plugins(cls):
+        s = _get_session()
+        return s.query(cls).order_by('name').all()
+        

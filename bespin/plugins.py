@@ -283,4 +283,4 @@ def save_to_gallery(user, location):
     
     if not plugin.version:
         plugin.version = metadata['version']
-        plugin.packageInfo = metadata
+        plugin.package_info = metadata

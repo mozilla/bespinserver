@@ -37,7 +37,7 @@ class Gallery(Base):
     owner_id=Column(Integer, ForeignKey('users.id', ondelete="cascade"))
     name=Column(String(128), unique=True)
     version=Column(String(30))
-    packageInfo=Column(PickleType())
+    package_info=Column(PickleType())
 
 def upgrade():
     # Upgrade operations go here. Don't create your own engine; use the engine
