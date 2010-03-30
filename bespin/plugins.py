@@ -285,10 +285,25 @@ def save_to_gallery(user, location):
         plugin.version = metadata['version']
         plugin.package_info = metadata
 
-def install_plugin_from_gallery(user, plugin_name):
-    plugin = GalleryPlugin.get_plugin(plugin_name)
-    if not plugin:
-        raise PluginError('Cannot find plugin "%s" in the gallery' % (plugin_name))
+def _collect_dependencies(main_plugin):
+    result = dict()
+    def add_deps(plugin):
+        deps = plugin.package_info.get("dependencies")
+        if not deps:
+            return
+        for dep in deps:
+            if dep in result:
+                continue
+            dep_plugin = GalleryPlugin.get_plugin(dep)
+            if not dep_plugin:
+                raise PluginError("Cannot find dependency '%s' for plugin '%s'"
+                                  % (dep, plugin.name))
+            result[dep] = dep_plugin
+            add_deps(dep_plugin)
+    add_deps(main_plugin)
+    return result
+
+def _perform_installation(user, plugin):
     version = plugin.version
     gallery_root = config.c.gallery_root
     plugin_dir = gallery_root / plugin.name
@@ -308,7 +323,20 @@ def install_plugin_from_gallery(user, plugin_name):
             destination.rmtree()
         location.copytree(destination)
     else:
-        destination = project.location / "plugins" / location.basename()
+        destination = project.location / "plugins" / (plugin.name + ".js")
         if destination.exists():
             destination.unlink()
         location.copy(destination)
+    
+
+def install_plugin_from_gallery(user, plugin_name):
+    plugin = GalleryPlugin.get_plugin(plugin_name)
+    if not plugin:
+        raise PluginError('Cannot find plugin "%s" in the gallery' % (plugin_name))
+    
+    deps = _collect_dependencies(plugin)
+    
+    _perform_installation(user, plugin)
+    for dep in deps.values():
+        _perform_installation(user, dep)
+    

@@ -385,6 +385,31 @@ def test_save_single_file_plugin_to_gallery():
     version_file = sfp3_dir / "2.3.2.js"
     assert version_file.exists()
     assert not version_file.isdir()
+
+def test_install_plugin_with_dependencies():
+    _init_data()
+    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    
+    try:
+        plugins.install_plugin_from_gallery(macgyver, "plugin1")
+        assert False, "Expected exception because of non-existent dependency"
+    except PluginError:
+        pass
+    
+def test_install_plugin_with_dependencies():
+    _init_data()
+    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    plugins.save_to_gallery(macgyver, plugindir / "plugin2")
+    
+    plugins.install_plugin_from_gallery(macgyver, "plugin1")
+    project = get_project(macgyver, macgyver, "BespinSettings")
+    plugin1_dir = project.location / "plugins/plugin1"
+    assert plugin1_dir.exists()
+    assert plugin1_dir.isdir()
+    
+    plugin2_dir = project.location / "plugins/plugin2"
+    assert plugin2_dir.exists()
+    assert plugin2_dir.isdir()
     
 # WEB TESTS
 
@@ -441,7 +466,6 @@ def test_plugin_upload_wont_work_for_someone_elses_plugin():
     
 def test_plugin_gallery_list():
     _init_data()
-    gallery_root = config.c.gallery_root
     plugins.save_to_gallery(macgyver, plugindir / "plugin1")
     
     response = app.get("/plugin/gallery/")
@@ -451,14 +475,13 @@ def test_plugin_gallery_list():
     
 def test_plugin_install_from_gallery():
     _init_data()
-    gallery_root = config.c.gallery_root
-    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    plugins.save_to_gallery(macgyver, plugindir / "singlefileplugin3.js")
     
-    response = app.post("/plugin/install/plugin1")
+    response = app.post("/plugin/install/singlefileplugin3")
     assert response.body == "OK"
     
     project = get_project(macgyver, macgyver, "BespinSettings")
-    plugin1_dir = project.location / "plugins/plugin1"
-    assert plugin1_dir.exists()
-    assert plugin1_dir.isdir()
+    sfp3_dir = project.location / "plugins/singlefileplugin3.js"
+    assert sfp3_dir.exists()
+    assert not sfp3_dir.isdir()
     
