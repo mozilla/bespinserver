@@ -253,11 +253,11 @@ def save_to_gallery(user, location):
     being raised."""
     metadata, errors = get_metadata(location)
     if errors:
-        raise PluginError("Errors found when reading plugin metadata: %s" % (errors,))
+        raise PluginError("Errors found when reading plugin metadata: %s" % (list(errors),))
     
     errors = _validate_metadata(metadata)
     if errors:
-        raise PluginError("Errors in plugin metadata: %s" % (errors,))
+        raise PluginError("Errors in plugin metadata: %s" % (list(errors),))
     
     plugin = GalleryPlugin.get_plugin(metadata['name'], user, create=True)
     if plugin.owner_id != user.id:

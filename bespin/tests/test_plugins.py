@@ -491,3 +491,15 @@ def test_plugin_install_from_gallery():
     assert sfp3_dir.exists()
     assert not sfp3_dir.isdir()
     
+def test_error_message_when_uploading_plugin_without_enough_metadata():
+    _init_data()
+    sfp = (path(__file__).dirname() / "plugindir").abspath() / "single_file_plugin1.js"
+    sfp_content = sfp.text()
+    response = app.put("/file/at/myplugins/single_file_plugin1.js", sfp_content)
+    response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
+"plugins": ["myplugins/single_file_plugin1.js"],
+"pluginOrdering": ["single_file_plugin1"]
+}""")
+    response = app.post("/plugin/upload/single_file_plugin1", status=400)
+    print response.body
+    assert response.body == "Errors in plugin metadata: ['description is required', 'version is required', 'licenses is required']"
