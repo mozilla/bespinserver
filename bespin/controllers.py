@@ -61,6 +61,7 @@ from bespin.database import User, get_project, log_event, GalleryPlugin
 from bespin.filesystem import NotAuthorized, OverQuota, File, FileNotFound
 from bespin.utils import send_email_template
 from bespin import filesystem, queue, plugins
+from bespin.plugins import get_user_plugin_path
 
 log = logging.getLogger("bespin.controllers")
 
@@ -1064,45 +1065,9 @@ def _plugin_response(response, path=None, plugin_list=None, log_user=None):
 def register_plugins(request, response):
     return _plugin_response(response)
 
-leading_slash = re.compile("^/")
-
-def _get_user_plugin_path(request, include_installed=True):
-    user = request.user
-    if not user:
-        return []
-        
-    project = get_project(user, user, "BespinSettings")
-    
-    pluginInfo = None
-    try:
-        pluginInfo_content = project.get_file("pluginInfo.json")
-        pluginInfo = simplejson.loads(pluginInfo_content)
-    except FileNotFound:
-        pass
-    except ValueError:
-        pass
-    
-    path = []
-    if pluginInfo:
-        root = user.get_location()
-        root_len = len(root)
-        pi_plugins = pluginInfo.get("plugins", None)
-        # NOTE: it's important to trim leading slashes from these paths
-        # because the user can edit the pluginInfo.json file directly.
-        if pi_plugins:
-            path.extend(dict(name="user", plugin = root / leading_slash.sub("", p), chop=root_len) for p in pi_plugins)
-        pi_path = pluginInfo.get("path", None)
-        if pi_path:
-            path.extend(dict(name="user", path=root / leading_slash.sub("", p), chop=root_len) for p in pi_path)
-    
-    if include_installed:
-        path.append(dict(name="user", path=project.location / "plugins", 
-            chop=len(user.get_location())))
-    return path
-    
 @expose(r'^/plugin/register/user$', 'GET', auth=True)
 def register_user_plugins(request, response):
-    path = _get_user_plugin_path(request)
+    path = get_user_plugin_path(request.user)
     return _plugin_response(response, path, log_user=request.user)
 
 @expose(r'^/plugin/register/tests$', 'GET', auth=False)
@@ -1175,7 +1140,7 @@ def reload_plugin(request, response):
     if ".." in plugin_name:
         raise BadRequest("'..' not allowed in plugin names")
     if request.user:
-        path = _get_user_plugin_path(request)
+        path = get_user_plugin_path(request.user)
     else:
         path = []
     path.extend(c.plugin_path)
@@ -1189,7 +1154,7 @@ def upload_plugin(request, response):
     plugin_name = request.kwargs['plugin_name']
     if ".." in plugin_name:
         raise BadRequest("'..' not allowed in plugin names")
-    path = _get_user_plugin_path(request, include_installed=False)
+    path = get_user_plugin_path(request.user, include_installed=False)
     plugin = plugins.lookup_plugin(plugin_name, path)
     if not plugin:
         raise plugins.PluginError("Cannot find plugin '%s' among user editable plugins" % plugin_name)

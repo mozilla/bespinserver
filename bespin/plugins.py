@@ -40,6 +40,8 @@ from urlparse import urlparse
 import time
 import zipfile
 
+import simplejson
+
 from dryice.plugins import (Plugin as BasePlugin,
                                  find_plugins as base_find_plugins,
                                  lookup_plugin as base_lookup_plugin,
@@ -48,7 +50,44 @@ from dryice.plugins import (Plugin as BasePlugin,
 from bespin import config
 from bespin import VERSION
 from bespin.database import GalleryPlugin
-from bespin.filesystem import NotAuthorized, get_project
+from bespin.filesystem import NotAuthorized, get_project, FileNotFound
+
+leading_slash = re.compile("^/")
+
+def get_user_plugin_path(user, include_installed=True):
+    if not user:
+        return []
+        
+    project = get_project(user, user, "BespinSettings")
+    
+    pluginInfo = None
+    try:
+        pluginInfo_content = project.get_file("pluginInfo.json")
+        pluginInfo = simplejson.loads(pluginInfo_content)
+    except FileNotFound:
+        pass
+    except ValueError:
+        pass
+    
+    path = []
+    if pluginInfo:
+        root = user.get_location()
+        root_len = len(root)
+        pi_plugins = pluginInfo.get("plugins", None)
+        # NOTE: it's important to trim leading slashes from these paths
+        # because the user can edit the pluginInfo.json file directly.
+        if pi_plugins:
+            path.extend(dict(name="user", plugin = root / leading_slash.sub("", p), chop=root_len) for p in pi_plugins)
+        pi_path = pluginInfo.get("path", None)
+        if pi_path:
+            path.extend(dict(name="user", path=root / leading_slash.sub("", p), chop=root_len) for p in pi_path)
+    
+    if include_installed:
+        path.append(dict(name="user", path=project.location / "plugins", 
+            chop=len(user.get_location())))
+    return path
+    
+
 
 class PluginError(Exception):
     pass
@@ -358,5 +397,12 @@ def install_plugin_from_gallery(user, plugin_name):
     for dep in deps.values():
         _perform_installation(user, dep)
     
-    return dict((plugin.name, plugin.package_info) for plugin in deps.values())
+    path = get_user_plugin_path(user)
+    path.extend(config.c.plugin_path)
+    
+    all_metadata = dict()
+    for name in deps:
+        all_metadata[name] = lookup_plugin(name, path).metadata
+    
+    return all_metadata
     

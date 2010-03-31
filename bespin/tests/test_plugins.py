@@ -482,6 +482,7 @@ def test_plugin_install_from_gallery():
     assert response.content_type == "application/json"
     data = loads(response.body)
     assert "single_file_plugin3" in data
+    assert "scripts" in data["single_file_plugin3"]
     
     project = get_project(macgyver, macgyver, "BespinSettings")
     sfp3_dir = project.location / "plugins/single_file_plugin3.js"
