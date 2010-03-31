@@ -38,6 +38,7 @@ import os
 import re
 from urlparse import urlparse
 import time
+import zipfile
 
 from dryice.plugins import (Plugin as BasePlugin,
                                  find_plugins as base_find_plugins,
@@ -247,6 +248,21 @@ def _validate_metadata(metadata):
         
     return errors
 
+def _zip_plugin(location, destfile):
+    zfile = zipfile.ZipFile(destfile, "w", zipfile.ZIP_DEFLATED)
+    ztime = time.gmtime()[:6]
+
+    for file in location.walkfiles():
+        zipinfo = zipfile.ZipInfo(location.relpathto(file))
+        # we don't know the original permissions.
+        # we'll default to read for all, write only by user
+        zipinfo.external_attr = 420 << 16L
+        zipinfo.date_time = ztime
+        zipinfo.compress_type = zipfile.ZIP_DEFLATED
+        zfile.writestr(zipinfo, file.bytes())
+
+    zfile.close()
+
 def save_to_gallery(user, location):
     """This is how a new plugin or new version of a plugin gets into the
     gallery. Note that any errors will result in a PluginError exception
@@ -269,11 +285,11 @@ def save_to_gallery(user, location):
         plugin_dir.makedirs()
     
     if location.isdir():
-        destination = plugin_dir / metadata['version']
+        destination = plugin_dir / ("%s-%s.zip" % (metadata['name'], metadata['version']))
         if destination.exists():
             raise PluginError("%s version %s already exists" % (metadata['name'],
                                                                 metadata['version']))
-        location.copytree(destination)
+        _zip_plugin(location, destination)
     else:
         destination = plugin_dir / (metadata['version'] + ".js")
         if destination.exists():
@@ -308,20 +324,21 @@ def _perform_installation(user, plugin):
     gallery_root = config.c.gallery_root
     plugin_dir = gallery_root / plugin.name
     
-    location = plugin_dir / version
+    location = plugin_dir / ("%s-%s.zip" % (plugin.name, version))
     if not location.exists():
         location = plugin_dir / (version + ".js")
         if not location.exists():
             raise PluginError("Unable to find the plugin files for '%s' version %s"
-                % (plugin_name, plugin.version))
+                % (plugin.name, plugin.version))
     
     project = get_project(user, user, "BespinSettings")
     
-    if location.isdir():
+    if location.endswith(".zip"):
         destination = project.location / "plugins" / plugin.name
         if destination.exists():
             destination.rmtree()
-        location.copytree(destination)
+        project.import_zipfile(location.basename(), location.open(), 
+                "plugins/" + plugin.name + "/")
     else:
         destination = project.location / "plugins" / (plugin.name + ".js")
         if destination.exists():

@@ -358,11 +358,8 @@ def test_save_plugin_good():
     
     plugin1_dir = gallery_root / "plugin1"
     assert plugin1_dir.exists()
-    version_dir = plugin1_dir / "0.9"
-    assert version_dir.exists()
-    assert version_dir.isdir()
-    package_info = version_dir / "package.json"
-    assert package_info.exists()
+    version_file = plugin1_dir / "plugin1-0.9.zip"
+    assert version_file.exists()
     
     s = config.c.session_factory()
     s.commit()
