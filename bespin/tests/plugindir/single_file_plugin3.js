@@ -36,7 +36,6 @@
 
 "define metadata";
 ({
-    "name": "singlefileplugin3",
     "description": "A single file plugin to install.",
     "licenses": [
         {
