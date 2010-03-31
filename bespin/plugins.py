@@ -357,18 +357,9 @@ def _collect_dependencies(main_plugin):
             add_deps(dep_plugin)
     add_deps(main_plugin)
     return result
-
-def _perform_installation(user, plugin):
-    version = plugin.version
-    gallery_root = config.c.gallery_root
-    plugin_dir = gallery_root / plugin.name
     
-    location = plugin_dir / ("%s-%s.zip" % (plugin.name, version))
-    if not location.exists():
-        location = plugin_dir / (version + ".js")
-        if not location.exists():
-            raise PluginError("Unable to find the plugin files for '%s' version %s"
-                % (plugin.name, plugin.version))
+def _perform_installation(user, plugin):
+    location = plugin.get_path()
     
     project = get_project(user, user, "BespinSettings")
     
@@ -388,7 +379,7 @@ def _perform_installation(user, plugin):
 def install_plugin_from_gallery(user, plugin_name):
     plugin = GalleryPlugin.get_plugin(plugin_name)
     if not plugin:
-        raise PluginError('Cannot find plugin "%s" in the gallery' % (plugin_name))
+        raise FileNotFound('Cannot find plugin "%s" in the gallery' % (plugin_name))
     
     deps = _collect_dependencies(plugin)
     

@@ -1076,7 +1076,6 @@ def register_test_plugins(request, response):
         raise FileNotFound("Test plugins are only in development environment")
     return _plugin_response(response, c.test_plugin_path)
 
-
 @expose(r'^/plugin/script/(?P<plugin_location>[^/]+)/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
 def load_script(request, response):
     response.content_type = "text/javascript"
@@ -1174,6 +1173,44 @@ def plugin_gallery(request, response):
                     description=p.package_info.get('description', ""))
         result.append(data)
     return _respond_json(response, result)
+
+class FileIterable(object):
+    def __init__(self, filename):
+        self.filename = filename
+    def __iter__(self):
+        return FileIterator(self.filename)
+class FileIterator(object):
+    chunk_size = 4096
+    def __init__(self, filename):
+        self.filename = filename
+        self.fileobj = open(self.filename, 'rb')
+    def __iter__(self):
+        return self
+    def next(self):
+        chunk = self.fileobj.read(self.chunk_size)
+        if not chunk:
+            raise StopIteration
+        return chunk
+
+@expose(r'^/plugin/download/(?P<plugin_name>[^/]+)/current/$', "GET", auth=False)
+def download_plugin(request, response):
+    plugin_name = request.kwargs['plugin_name']
+    plugin = GalleryPlugin.get_plugin(plugin_name)
+    if plugin is None:
+        raise FileNotFound("Plugin %s is not in the gallery" % (plugin_name))
+    location = plugin.get_path()
+    if location.endswith(".zip"):
+        response.content_type = "application/zip"
+    else:
+        response.content_type = "text/javascript"
+    
+    response.app_iter = FileIterable(location)
+    response.content_length = os.path.getsize(location)
+    response.last_modified = os.path.getmtime(location)
+    response.etag = '%s-%s-%s' % (response.last_modified,
+                              response.content_length, hash(location))
+    return response()
+    
     
 def _wrap_script(plugin_name, script_path, script_text):
     if script_path:

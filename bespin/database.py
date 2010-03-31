@@ -809,4 +809,22 @@ class GalleryPlugin(Base):
     def get_all_plugins(cls):
         s = _get_session()
         return s.query(cls).order_by('name').all()
+    
+    def get_path(self, version=None):
+        """Retrieves the path to the plugin for a particular
+        version. If the version is not provided, use the
+        current version."""
+        if version is None:
+            version = self.version
+            
+        gallery_root = config.c.gallery_root
+        plugin_dir = gallery_root / self.name
+
+        location = plugin_dir / ("%s-%s.zip" % (self.name, version))
+        if not location.exists():
+            location = plugin_dir / (version + ".js")
+            if not location.exists():
+                raise FileNotFound("Unable to find the plugin files for '%s' version %s"
+                    % (self.name, self.version))
+        return location
         

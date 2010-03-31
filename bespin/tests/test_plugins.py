@@ -501,3 +501,16 @@ def test_error_message_when_uploading_plugin_without_enough_metadata():
     response = app.post("/plugin/upload/single_file_plugin1", status=400)
     print response.body
     assert response.body == "Errors in plugin metadata: ['description is required', 'version is required', 'licenses is required']"
+
+def test_download_a_plugin():
+    _init_data()
+    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    plugins.save_to_gallery(macgyver, plugindir / "single_file_plugin3.js")
+    
+    response = app.get("/plugin/download/plugin1/current/")
+    assert response.content_type == "application/zip"
+    
+    response = app.get("/plugin/download/single_file_plugin3/current/")
+    assert response.content_type == "text/javascript"
+    
+    response = app.get("/plugin/download/doesnotexist/current/", status=404)
