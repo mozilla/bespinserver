@@ -251,7 +251,7 @@ def test_list_all():
     data = simplejson.loads(resp.body)
     assert isinstance(data, list)
     assert len(data) == 1
-    assert data[0] == dict(name="bar/baz.txt")
+    assert data[0] == "bar/baz.txt"
     
     resp = app.get("/file/list_all/")
     assert resp.content_type == "application/json"

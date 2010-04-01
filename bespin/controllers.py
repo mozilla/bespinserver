@@ -349,7 +349,7 @@ def file_list_all(request, response):
             else:
                 pname = project.owner.username + "+" + project.short_name
             metadata = project.metadata
-            files.extend({ 'name':pname + name } 
+            files.extend(pname + name
                 for name in metadata.get_file_list())
             metadata.close()
     else:
@@ -358,7 +358,7 @@ def file_list_all(request, response):
         project = get_project(user, user, project_name)
         metadata = project.metadata
 
-        files.extend({ 'name':name } for name in metadata.get_file_list(path))
+        files.extend(name for name in metadata.get_file_list(path))
         metadata.close()
     
     return _respond_json(response, files)
