@@ -975,8 +975,8 @@ def messages(request, response):
     if user is None:
         body = u"[]"
     else:
-        question = urllib.unquote(request.body)
-        answer = ask_mobwrite(question, user)
+        question = request.body
+        answer = ask_mobwrite(question, user) + "\n\n"
         msgs = [simplejson.loads(msg) for msg in user.pop_messages()]
         msgs.append({
             "msgtargetid": "mobwrite",
