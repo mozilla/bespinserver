@@ -976,13 +976,14 @@ def messages(request, response):
         body = u"[]"
     else:
         question = request.body
-        answer = ask_mobwrite(question, user) + "\n\n"
         msgs = [simplejson.loads(msg) for msg in user.pop_messages()]
-        msgs.append({
-            "msgtargetid": "mobwrite",
-            "from": user.username,
-            "text": answer
-        })
+        if "collab" in c.capabilities:
+            answer = ask_mobwrite(question, user) + "\n\n"
+            msgs.append({
+                "msgtargetid": "mobwrite",
+                "from": user.username,
+                "text": answer
+            })
         body = simplejson.dumps(msgs)
 
     response.content_type = "application/json"

@@ -185,7 +185,7 @@ c.javascript_plugins = []
 # List of capabilities provided by the server. This is just a list of strings
 # to be interpreted by the client. This will adjust the user interface to
 # focus the user on the capabilities provided by this server.
-c.capabilities = set(["vcs", "collab"])
+c.capabilities = set(["vcs"])
 
 # Set this variable to point to the location of a Thunderhead
 # source directory and that will be used during development.
