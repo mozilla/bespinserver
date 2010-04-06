@@ -336,9 +336,8 @@ def save_to_gallery(user, location):
                                                                 metadata['version']))
         location.copy(destination)
     
-    if not plugin.version:
-        plugin.version = metadata['version']
-        plugin.package_info = metadata
+    plugin.version = metadata['version']
+    plugin.package_info = metadata
 
 def _collect_dependencies(main_plugin):
     result = dict()
