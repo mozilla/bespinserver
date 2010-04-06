@@ -158,8 +158,8 @@ def start():
 def production():
     """Gets things ready for production."""
     non_production_packages = set(["py", "WebTest", "boto", "virtualenv", 
-                                  "Paver", "BespinServer", "nose",
-                                  "path", "httplib2",
+                                  "Paver", "nose", "growl",
+                                  "path", "httplib2", "Jinja2", "Markdown",
                                   "MySQL-python"])
     production = path("production")
     production_requirements = production / "requirements.txt"
@@ -187,13 +187,17 @@ def production():
     i = 0
     found_packages = set()
     while i < len(lines):
+        if lines[i].startswith("-e "):
+            del lines[i]
+            continue
+            
         rmatch = requirement_pattern.match(lines[i])
         if rmatch:
             name = rmatch.group(1)
             found_packages.add(name)
             deleted = False
             for npp in non_production_packages:
-                if name == npp or "BespinServer-tip" in npp:
+                if name == npp:
                     del lines[i]
                     deleted = True
                     break
@@ -202,6 +206,8 @@ def production():
         i+=1
     
     lines.append("libs/BespinServer-%s.tar.gz" % options.version)
+    lines.append("libs/dryice-%s.tar.gz" % options.version)
+    
     
     # path.py doesn't install properly via pip/easy_install
     lines.append("http://pypi.python.org/packages/source/p/path.py/"
