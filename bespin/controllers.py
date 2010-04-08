@@ -563,7 +563,7 @@ def rename_project(request, response):
     response.content_type = "text/plain"
     return response()
 
-@expose(r'^/network/followers/', 'GET')
+@expose(r'^/network/followers/$', 'GET')
 def follow(request, response):
     return _users_followed_response(request.user, response)
 
@@ -581,19 +581,28 @@ def unfollow(request, response):
         request.user.unfollow(other_user)
     return _users_followed_response(request.user, response)
 
-@expose(r'^/network/broadcast/', 'POST')
-def broadcast(request, response):
+@expose(r'^/network/followers/tell/$', 'POST')
+def tell(request, response):
     user = request.user
-    post = simplejson.loads(urllib.unquote(request.body))
-    text = post["text"] or "*unspecified*"
+    post = simplejson.loads(request.body)
+    text = post.get('text', '*unspecified*')
+    username = post.get('username', '')
+    target_id = username and 'tell' or 'broadcast'
     connections = user.users_following_me()
+    list = []
     for connection in connections:
-        connection.following.publish({
-            "msgtargetid": "broadcast",
-            "from": user.username,
-            "text": text
-        })
-    return _users_followed_response(request.user, response)
+        if not username or connection.following.username == username:
+            connection.following.publish({
+                'msgtargetid': target_id,
+                'from': user.username,
+                'text': text
+            })
+            list.append(connection.following.username)
+            if username:
+                break;
+    response.body = simplejson.dumps(list)
+    response.content_type = "text/plain"
+    return response()
 
 @expose(r'^/group/list/all', 'GET')
 def group_list_all(request, response):
@@ -665,6 +674,13 @@ def _users_followed_response(user, response):
     response.content_type = "text/plain"
     return response()
 
+def _users_following_response(user, response):
+    list = user.users_following_me()
+    list = [connection.following.username for connection in list]
+    response.body = simplejson.dumps(list)
+    response.content_type = "text/plain"
+    return response()
+
 @expose(r'^/share/list/all/$', 'GET')
 def share_list_all(request, response):
     "List all project shares"
@@ -709,6 +725,41 @@ def share_add(request, response):
     options = simplejson.loads(request.body)
     request.user.add_sharing(project, member, options)
     return _respond_blank(response)
+
+@expose(r'^/share/tell/(?P<project>[^/]+)/$', 'POST')
+def share_tell(request, response):
+    user = request.user
+    project_name = request.kwargs['project']
+    post = simplejson.loads(request.body)
+    text = post.get('text', '*unspecified*')
+    recipients = post.get('recipients', [])
+    list = []
+    for recipient in recipients:
+        #try:
+            parts = project_name.partition('+')
+            if parts[1]:
+                owner = user.find_user(parts[0])
+                project_name = parts[2]
+            else:
+                owner = user
+            member = user.find_member(recipient)
+            project = get_project(owner, owner, project_name)
+            if _is_project_shared(owner, user, project) and _is_project_shared(owner, member, project):
+                # we can safely send a message
+                member.publish({
+                    'msgtargetid': 'share_tell',
+                    'from': user.username,
+                    'text': text
+                })
+                list.append(recipient)
+        #except:
+        #    pass
+    response.body = simplejson.dumps(list)
+    response.content_type = "text/plain"
+    return response()
+
+def _is_project_shared(owner, user, project):
+    return owner.username == user.username or owner.is_project_shared(project, user)
 
 @expose(r'^/viewme/list/all/$', 'GET')
 def viewme_list_all(request, response):
