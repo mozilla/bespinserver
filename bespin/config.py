@@ -193,6 +193,10 @@ c.th_src = None
 
 c.using_dojo_source = False
 
+# If you want to log errors to errorstack.com, enter the
+# stack key here
+c.errorstack_key = None
+
 def set_profile(profile):
     if profile == "test":
         # this import will install the bespin_test store
@@ -253,6 +257,9 @@ def load_pyconfig(configfile):
     print(c.fsroot)
 
 def activate_profile():
+    
+    if c.errorstack_key:
+        configure_errorstack()
     
     if c.server_base_url and not c.server_base_url.endswith("/"):
         c.server_base_url += "/"
@@ -355,6 +362,29 @@ def activate_profile():
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(logging.Formatter("%(relativeCreated)6d %(name)9s %(levelname)5s: %(message)s"))
         logging.getLogger().addHandler(stdout_handler)
+
+def configure_errorstack():
+    """Configures the logging to ErrorStack"""
+    logger = logging.getLogger()
+
+    # Define ErrorStack Handler
+    class ErrorStackHandler(logging.handlers.HTTPHandler):
+        def mapLogRecord(self, record):
+            """ Define the values submitted to ErrorStack.com. """
+            keys = ['name','msg','levelname','module','pathname','funcName','lineno',
+                    'args','exc_text','threadName','thread','process','asctime']
+            ErrorInfo = {}
+            for key in keys:
+                ErrorInfo[key] = record.__dict__[key]
+            return ErrorInfo
+        
+
+    # Create ErrorStack handler, set level to error, and add it to the logger
+    ESHandler = ErrorStackHandler("www.errorstack.com", "/submit?_s=%s&_r=json" % (c.errorstack_key), "POST")
+    ESHandler.setLevel(logging.ERROR)
+    logger.addHandler(ESHandler)
+
+
 
 def dev_spawning_factory(spawning_config):
     spawning_config['app_factory'] = spawning_config['args'][0]
