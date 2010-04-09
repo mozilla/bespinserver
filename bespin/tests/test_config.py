@@ -63,7 +63,7 @@ def test_server_capabilities():
     data = simplejson.loads(resp.body)
     print data
     assert data == dict(
-        capabilities=["vcs", "collab"],
+        capabilities=["vcs"],
         dojoModulePath={},
         javaScriptPlugins=[]
     )
