@@ -77,6 +77,10 @@ def test_create_new_user():
     
     users = User.find_by_email("bill@bixby.com")
     assert users[0].username == "BillBixby"
+    assert len(users) == 1
+    
+    user = User.find_user("bill@bixby.com")
+    assert user == users[0]
     
 def test_create_duplicate_user():
     s = _get_session(True)

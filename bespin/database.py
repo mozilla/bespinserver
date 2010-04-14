@@ -155,7 +155,13 @@ class User(Base):
         """Looks up a user by username. If password is provided, the password
         will be verified. Returns None if the user is not
         found or the password does not match."""
-        user = _get_session().query(cls).filter_by(username=username).first()
+        if "@" in username:
+            users = cls.find_by_email(username)
+            if len(users) != 1:
+                return None
+            user = users[0]
+        else:
+            user = _get_session().query(cls).filter_by(username=username).first()
         if user and password is not None:
             digest = User.generate_password(password)
             if str(user.password) != digest:
