@@ -45,6 +45,7 @@ import socket
 import urllib
 from hashlib import sha256
 import re
+import md5
 
 from urlrelay import URLRelay, register
 from paste.auth import auth_tkt
@@ -191,6 +192,19 @@ def password_change(request, response):
     if verify_code != code:
         raise BadRequest("Invalid verification code for password change.")
     user.password = User.generate_password(request.POST['newPassword'])
+    return response()
+
+@expose(r'^/register/userdata/(?P<username>.+)$')
+def public_user_data(request, response):
+    """Request public user data."""
+    username = request.kwargs.get('username')
+    user = User.find_user(username)
+    if not user:
+        raise BadRequest("Unknown user: " + username)
+    response.content_type='application/json'
+    response.body = simplejson.dumps({
+        'email_md5': user.email and md5.new(user.email).hexdigest()
+    })
     return response()
 
 @expose(r'^/settings/$', 'POST')
