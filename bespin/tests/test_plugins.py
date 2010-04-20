@@ -203,27 +203,34 @@ def test_user_installed_plugins():
     assert "EditablePlugin" not in response.body
     assert "file/at/BespinSettings/plugins/BiggerPlugin%3Asomedir/script.js" in response.body
     data = loads(response.body)
-    md = data["BiggerPlugin"]
+    md = data["metadata"]["BiggerPlugin"]
     assert md["resourceURL"] == "/server/file/at/BespinSettings/plugins/BiggerPlugin/resources/"
     
     response = app.put("/file/at/myplugins/EditablePlugin/package.json", "{}")
     response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
 "path": ["myplugins/"],
-"pluginOrdering": ["EditablePlugin"]
+"ordering": ["EditablePlugin", "MyPlugin"],
+"deactivated": { "EditablePlugin": true, "BiggerPlugin": true }
 }""")
+
     response = app.get("/plugin/register/user")
+    
     assert response.content_type == "application/json"
     assert "MyPlugin" in response.body
     assert "BiggerPlugin" in response.body
     assert "EditablePlugin" in response.body
-    
+        
     data = loads(response.body)
-    assert len(data) == 3
+    assert len(data["metadata"]) == 3
     s = _get_session()
     sel = EventLog.select().where(EventLog.c.kind=='userplugin')
     result = s.connection().execute(sel).fetchall()
     assert len(result) == 2
     assert result[-1].details == '3'
+    
+    assert len(data["ordering"]) == 2
+    assert data["ordering"] == ["EditablePlugin", "MyPlugin"]
+    assert data["deactivated"] == dict(EditablePlugin=True, BiggerPlugin=True)
     
     response = app.get("/getscript/file/at/BespinSettings/plugins/MyPlugin.js%3A")
     assert response.content_type == "text/javascript"

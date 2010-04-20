@@ -54,10 +54,10 @@ from bespin.filesystem import NotAuthorized, get_project, FileNotFound
 
 leading_slash = re.compile("^/")
 
-def get_user_plugin_path(user, include_installed=True):
+def get_user_plugin_info(user):
     if not user:
-        return []
-        
+        return None, None
+    
     project = get_project(user, user, "BespinSettings")
     
     pluginInfo = None
@@ -69,16 +69,28 @@ def get_user_plugin_path(user, include_installed=True):
     except ValueError:
         pass
     
+    return pluginInfo, project
+
+def get_user_plugin_path(user, include_installed=True, plugin_info=None, project=None):
+    if not user:
+        return []
+
+    if plugin_info is None:
+        plugin_info, project = get_user_plugin_info(user)
+    
+    if project is None:
+        project = get_project(user, user, "BespinSettings")
+    
     path = []
-    if pluginInfo:
+    if plugin_info:
         root = user.get_location()
         root_len = len(root)
-        pi_plugins = pluginInfo.get("plugins", None)
+        pi_plugins = plugin_info.get("plugins", None)
         # NOTE: it's important to trim leading slashes from these paths
         # because the user can edit the pluginInfo.json file directly.
         if pi_plugins:
             path.extend(dict(name="user", plugin = root / leading_slash.sub("", p), chop=root_len) for p in pi_plugins)
-        pi_path = pluginInfo.get("path", None)
+        pi_path = plugin_info.get("path", None)
         if pi_path:
             path.extend(dict(name="user", path=root / leading_slash.sub("", p), chop=root_len) for p in pi_path)
     
@@ -86,7 +98,6 @@ def get_user_plugin_path(user, include_installed=True):
         path.append(dict(name="user", path=project.location / "plugins", 
             chop=len(user.get_location())))
     return path
-    
 
 
 class PluginError(Exception):

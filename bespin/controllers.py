@@ -61,7 +61,7 @@ from bespin.database import User, get_project, log_event, GalleryPlugin
 from bespin.filesystem import NotAuthorized, OverQuota, File, FileNotFound
 from bespin.utils import send_email_template
 from bespin import filesystem, queue, plugins
-from bespin.plugins import get_user_plugin_path
+from bespin.plugins import get_user_plugin_path, get_user_plugin_info
 
 log = logging.getLogger("bespin.controllers")
 
@@ -1118,8 +1118,25 @@ def register_plugins(request, response):
 
 @expose(r'^/plugin/register/user$', 'GET', auth=True)
 def register_user_plugins(request, response):
-    path = get_user_plugin_path(request.user)
-    return _plugin_response(response, path, log_user=request.user)
+    pluginInfo, project = get_user_plugin_info(request.user)
+    path = get_user_plugin_path(request.user, plugin_info=pluginInfo, project=project)
+
+    plugin_list = plugins.find_plugins(path)
+
+    metadata = dict((plugin.name, plugin.metadata) 
+        for plugin in plugin_list)
+    
+    if pluginInfo is None:
+        pluginInfo = dict(ordering=[], deactivated={});
+    
+    if request.user:
+        log_event("userplugin", request.user, len(metadata))
+        
+    return _respond_json(response, dict({
+        'metadata'   : metadata ,
+        'ordering'   : pluginInfo.get("ordering", []),
+        'deactivated': pluginInfo.get("deactivated", {})
+    }));
 
 @expose(r'^/plugin/register/tests$', 'GET', auth=False)
 def register_test_plugins(request, response):
