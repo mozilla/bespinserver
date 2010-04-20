@@ -241,9 +241,12 @@ def test_user_installed_plugins():
     assert "tiki.module('BiggerPlugin:somedir/script', function" in response.body
     assert "tiki.script('BiggerPlugin:somedir/script.js')" in response.body
     
-    
 def test_plugin_reload():
     _init_data()
+
+    # test plugin does not exist
+    app.get("/plugin/reload/NOPLUGIN", status=404)
+
     response = app.get("/plugin/reload/plugin2")
     print response.body
     assert '"plugin2": {' in response.body

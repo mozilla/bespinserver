@@ -1095,10 +1095,15 @@ def run_deploy(request, response):
     response.body = simplejson.dumps(dict(jobid=jobid, 
         taskname="deploy %s" % (project_name)))
     return response()
+
+def _plugin_does_not_exist(response, plugin_name):
+    response.status = "404 Not Found"
+    response.content_type = "text/plain"
+    response.body = "Plugin '" + plugin_name + "' does not exist."
+    return response()
     
 def _plugin_response(response, path=None, plugin_list=None, log_user=None):
     response.content_type = "application/json"
-    
     
     if plugin_list is None:
         plugin_list = plugins.find_plugins(path)
@@ -1163,10 +1168,7 @@ def load_script(request, response):
         
     plugin = plugins.lookup_plugin(plugin_name, [path])
     if not plugin:
-        response.status = "404 Not Found"
-        response.content_type = "text/plain"
-        response.body = "Plugin " + plugin_name + " does not exist"
-        return response()
+        return _plugin_does_not_exist(response, plugin_name)
     
     script_text = plugin.get_script_text(script_path)
     response.body = _wrap_script(plugin_name, script_path, script_text)
@@ -1190,10 +1192,7 @@ def load_file(request, response):
         
     plugin = plugins.lookup_plugin(plugin_name, [path])
     if not plugin:
-        response.status = "404 Not Found"
-        response.content_type = "text/plain"
-        response.body = "Plugin " + plugin_name + " does not exist"
-        return response()
+        return _plugin_does_not_exist(response, plugin_name)
     
     # use the static package to actually serve the file
     newapp = static.Cling(plugin.location)
@@ -1202,7 +1201,6 @@ def load_file(request, response):
 
 @expose(r'^/plugin/reload/(?P<plugin_name>.+)', 'GET', auth=False)
 def reload_plugin(request, response):
-    response.content_type = "text/javascript"
     plugin_name = request.kwargs['plugin_name']
     if ".." in plugin_name:
         raise BadRequest("'..' not allowed in plugin names")
@@ -1213,6 +1211,9 @@ def reload_plugin(request, response):
     path.extend(c.plugin_path)
     
     plugin = plugins.lookup_plugin(plugin_name, path)
+    
+    if plugin is None:
+        return _plugin_does_not_exist(response, plugin_name)
     
     return _plugin_response(response, plugin_list=[plugin])
 
