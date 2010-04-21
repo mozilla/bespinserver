@@ -198,6 +198,13 @@ c.using_dojo_source = False
 c.errorstack_key = None
 
 def set_profile(profile):
+    if profile == "test" or profile == "dev":
+        client_plugin_path = path.getcwd() / ".." / "bespinclient" / "plugins"
+        
+        c.plugin_path = [dict(name="supported", 
+                    path=client_plugin_path / "supported"),
+                    dict(name="labs", path=client_plugin_path / "labs")]
+
     if profile == "test":
         # this import will install the bespin_test store
         c.dburl = "sqlite://"
@@ -236,11 +243,6 @@ def set_profile(profile):
         c.email_host = None
         c.vcs_timeout = -1
         
-        client_plugin_path = path.getcwd() / ".." / "bespinclient" / "plugins"
-        
-        c.plugin_path = [dict(name="supported", 
-                    path=client_plugin_path / "supported"),
-                    dict(name="labs", path=client_plugin_path / "labs")]
         c.test_plugin_path = [dict(name="testing", path=client_plugin_path / "testing")]
         
         c.plugin_path.extend(c.test_plugin_path)

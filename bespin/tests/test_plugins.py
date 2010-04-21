@@ -48,6 +48,11 @@ from __init__ import BespinTestApp
 app = None
 
 plugindir = (path(__file__).dirname() / "plugindir").abspath()
+config.set_profile("test")
+_original_plugin_path = config.c.plugin_path
+
+def _install_test_plugin_path():
+    config.c.plugin_path = [dict(name="testplugins", path=plugindir, chop=len(plugindir))]
 
 def setup_module():
     global app, app_murdoc
@@ -57,9 +62,11 @@ def setup_module():
     app_murdoc = controllers.make_app()
     app_murdoc = BespinTestApp(app_murdoc)
     
-
-    config.c.plugin_path = [dict(name="testplugins", path=plugindir, chop=len(plugindir))]
+    _install_test_plugin_path()
     config.activate_profile()
+
+def teardown_module():
+    config.c.plugin_path = _original_plugin_path
 
 def _init_data():
     global macgyver, someone_else, murdoc
@@ -511,6 +518,24 @@ def test_error_message_when_uploading_plugin_without_enough_metadata():
     response = app.post("/plugin/upload/single_file_plugin1", status=400)
     print response.body
     assert response.body == "Errors in plugin metadata: ['description is required', 'version is required', 'licenses is required']"
+
+def test_error_when_uploading_plugin_with_name_of_builtin():
+    _init_data()
+    config.c.plugin_path = _original_plugin_path
+    print "CCPP", config.c.plugin_path
+    sfp = (path(__file__).dirname() / "plugindir").abspath() / "single_file_plugin3.js"
+    sfp_content = sfp.text()
+    response = app.put("/file/at/myplugins/text_editor.js", sfp_content)
+    response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
+"plugins": ["myplugins/text_editor.js"],
+"pluginOrdering": ["text_editor"]
+}""")
+    try:
+        response = app.post("/plugin/upload/text_editor", status=400)
+        print response.body
+        assert response.body == "Plugin text_editor is a pre-existing core plugin"
+    finally:
+        _install_test_plugin_path()
 
 def test_download_a_plugin():
     _init_data()

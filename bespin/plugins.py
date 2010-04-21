@@ -325,6 +325,10 @@ def save_to_gallery(user, location):
     if errors:
         raise PluginError("Errors in plugin metadata: %s" % (list(errors),))
     
+    plugin = lookup_plugin(metadata['name'], config.c.plugin_path)
+    if plugin and plugin.location_name == "supported":
+        raise PluginError('Plugin %s is a pre-existing core plugin' % (metadata['name']))
+    
     plugin = GalleryPlugin.get_plugin(metadata['name'], user, create=True)
     if plugin.owner_id != user.id:
         raise NotAuthorized("Plugin '%s' is owned by another user" % (metadata['name']))
