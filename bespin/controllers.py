@@ -293,6 +293,9 @@ def getfile(request, response):
 
     mode = request.GET.get('mode', 'rw')
     contents = project.get_file(path, mode)
+    
+    _tell_file_event(user, project, path, 'open')
+    
     response.body = contents
     response.content_type = "zombie/brains"
     return response()
@@ -695,6 +698,31 @@ def _users_following_response(user, response):
     response.content_type = "text/plain"
     return response()
 
+def _tell_file_event(user, project, path, event):
+    followers = user.users_following_me()
+    followers = [follower.following.username for follower in followers]
+    # find the owner
+    isMyProject = _is_project_shared(project, user)
+    print "*** 2 " + str(isMyProject)
+    for follower in followers:
+        #try:
+            member = User.find_user(follower)
+            if isMyProject and _is_project_shared(project, member):
+                # we can safely send a message
+                member.publish({
+                    'msgtargetid': 'file_event',
+                    'from':    user.username,
+                    'event':   event,
+                    'project': project.name,
+                    'owner':   project.owner.username,
+                    'path':    path,
+                })
+        #except:
+            #pass
+    
+def _is_project_shared(project, user):
+    return project.owner.username == user.username or project.owner.is_project_shared(project, user)
+
 @expose(r'^/share/list/all/$', 'GET')
 def share_list_all(request, response):
     "List all project shares"
@@ -746,19 +774,22 @@ def share_tell(request, response):
     project_name = request.kwargs['project']
     post = simplejson.loads(request.body)
     text = post.get('text', '*unspecified*')
-    recipients = post.get('recipients', [])
+    # find the owner
+    parts = project_name.partition('+')
+    if parts[1]:
+        owner = User.find_user(parts[0])
+        project_name = parts[2]
+    else:
+        owner = user
+    project = get_project(user, owner, project_name)
+    isMyProject = _is_project_shared(project, user)
+    # notify recipients
     list = []
+    recipients = post.get('recipients', [])
     for recipient in recipients:
         #try:
-            parts = project_name.partition('+')
-            if parts[1]:
-                owner = user.find_user(parts[0])
-                project_name = parts[2]
-            else:
-                owner = user
-            member = user.find_member(recipient)
-            project = get_project(owner, owner, project_name)
-            if _is_project_shared(owner, user, project) and _is_project_shared(owner, member, project):
+            member = User.find_user(recipient)
+            if isMyProject and _is_project_shared(project, member):
                 # we can safely send a message
                 member.publish({
                     'msgtargetid': 'share_tell',
@@ -771,9 +802,6 @@ def share_tell(request, response):
     response.body = simplejson.dumps(list)
     response.content_type = "text/plain"
     return response()
-
-def _is_project_shared(owner, user, project):
-    return owner.username == user.username or owner.is_project_shared(project, user)
 
 @expose(r'^/viewme/list/all/$', 'GET')
 def viewme_list_all(request, response):
