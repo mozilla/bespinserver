@@ -700,7 +700,7 @@ def _users_following_response(user, response):
 
 def _tell_file_event(user, project, path, event):
     followers = user.users_following_me()
-    followers = [follower.following.username for follower in followers]
+    followers = [follower.following.username for follower in followers if follower.following]
     # find the owner
     isMyProject = _is_project_shared(project, user)
     print "*** 2 " + str(isMyProject)
