@@ -122,7 +122,7 @@ class Plugin(BasePlugin):
                 ]
             version_stamp = int(time.time()) if not "version" in md else md['version']
             md['stylesheets'] = [
-                dict(url="%sfile/at/%s%%3A%s?%s" % (
+                dict(url="%spreview/at/%s/%s?%s" % (
                     server_base_url, self.relative_location, 
                     stylesheet, version_stamp),
                     id="%s:%s" % (name, stylesheet))
