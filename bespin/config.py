@@ -203,6 +203,8 @@ def set_profile(profile):
         
         c.plugin_path = [dict(name="supported", 
                     path=client_plugin_path / "supported"),
+                    dict(name="thirdparty", 
+                        path=client_plugin_path / "thirdparty"),
                     dict(name="labs", path=client_plugin_path / "labs")]
 
     if profile == "test":
