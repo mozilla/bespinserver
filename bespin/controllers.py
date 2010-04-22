@@ -273,6 +273,10 @@ def putfile(request, response):
     user = request.user
 
     owner, project, path = _split_path(request)
+
+    if (path == '' or path.endswith('/')) and request.body:
+        raise BadRequest("Path ended in '/' indicating directory, but request contains body text")
+
     project = get_project(user, owner, project, create=True)
 
     if path.endswith('/'):
