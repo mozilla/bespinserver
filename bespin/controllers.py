@@ -1391,12 +1391,13 @@ def install_plugin_from_url(request, response):
     """Installs a plugin into the user's BespinSettings/plugins directory."""
     user = request.user
     url = request.POST.get('url')
+    
     plugin_name = request.POST.get('pluginName')
     
     if not url or not urlmatch.search(url):
         raise BadRequest("URL not provided")
     
-    if not plugin_name or "/" in plugin_name or ".." in plugin_name:
+    if plugin_name and ("/" in plugin_name or ".." in plugin_name):
         raise BadRequest("Invalid plugin name. / and .. are not permitted")
     
     tempdatafile = _download_data(url, request)
@@ -1412,7 +1413,7 @@ def install_plugin_from_url(request, response):
     response.content_type = "application/json"
     return response()
 
-@expose(r'^/plugin/install/(?P<name>.*)$', 'POST')
+@expose(r'^/plugin/install/(?P<name>.+)$', 'POST')
 def install_plugin_from_gallery(request, response):
     plugin_name = request.kwargs["name"]
     data = plugins.install_plugin_from_gallery(request.user, plugin_name)
