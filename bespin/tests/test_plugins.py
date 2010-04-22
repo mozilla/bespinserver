@@ -51,8 +51,9 @@ plugindir = (path(__file__).dirname() / "plugindir").abspath()
 config.set_profile("test")
 _original_plugin_path = config.c.plugin_path
 
-def _install_test_plugin_path():
-    config.c.plugin_path = [dict(name="testplugins", path=plugindir, chop=len(plugindir))]
+def _install_test_plugin_path(name="testplugins"):
+    config.c.plugin_path = [dict(name=name, path=plugindir, 
+                            chop=len(plugindir))]
 
 def setup_module():
     global app, app_murdoc
@@ -369,89 +370,109 @@ def test_save_plugin_without_enough_metadata():
         pass
     
 def test_save_plugin_good():
-    _init_data()
-    gallery_root = config.c.gallery_root
-    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    _install_test_plugin_path("user")
+    try:
+        _init_data()
+        gallery_root = config.c.gallery_root
+        plugins.save_to_gallery(macgyver, plugindir / "plugin1")
     
-    plugin1_dir = gallery_root / "plugin1"
-    assert plugin1_dir.exists()
-    version_file = plugin1_dir / "plugin1-0.9.zip"
-    assert version_file.exists()
+        plugin1_dir = gallery_root / "plugin1"
+        assert plugin1_dir.exists()
+        version_file = plugin1_dir / "plugin1-0.9.zip"
+        assert version_file.exists()
     
-    s = config.c.session_factory()
-    s.commit()
-    s.clear()
+        s = config.c.session_factory()
+        s.commit()
+        s.clear()
     
-    num_plugins = s.query(GalleryPlugin).count()
-    assert num_plugins == 1
-    plugin = s.query(GalleryPlugin).first()
-    assert plugin.name == "plugin1"
-    assert plugin.version == "0.9"
-    assert plugin.package_info['description'] == "plugin the first."
+        num_plugins = s.query(GalleryPlugin).count()
+        assert num_plugins == 1
+        plugin = s.query(GalleryPlugin).first()
+        assert plugin.name == "plugin1"
+        assert plugin.version == "0.9"
+        assert plugin.package_info['description'] == "plugin the first."
+    finally:
+        _install_test_plugin_path()
     
 def test_save_single_file_plugin_to_gallery():
     _init_data()
-    gallery_root = config.c.gallery_root
-    plugins.save_to_gallery(macgyver, plugindir / "single_file_plugin3.js")
+    _install_test_plugin_path("user")
+    try:
+        gallery_root = config.c.gallery_root
+        plugins.save_to_gallery(macgyver, plugindir / "single_file_plugin3.js")
     
-    sfp3_dir = gallery_root / "single_file_plugin3"
-    assert sfp3_dir.exists()
-    version_file = sfp3_dir / "2.3.2.js"
-    assert version_file.exists()
-    assert not version_file.isdir()
+        sfp3_dir = gallery_root / "single_file_plugin3"
+        assert sfp3_dir.exists()
+        version_file = sfp3_dir / "2.3.2.js"
+        assert version_file.exists()
+        assert not version_file.isdir()
+    finally:
+        _install_test_plugin_path()
 
 def test_install_plugin_with_dependencies():
     _init_data()
-    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
-    
+    _install_test_plugin_path("user")
     try:
-        plugins.install_plugin_from_gallery(macgyver, "plugin1")
-        assert False, "Expected exception because of non-existent dependency"
-    except PluginError:
-        pass
+        plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+
+        try:
+            plugins.install_plugin_from_gallery(macgyver, "plugin1")
+            assert False, "Expected exception because of non-existent dependency"
+        except PluginError:
+            pass
+    finally:
+        _install_test_plugin_path()
     
 def test_install_plugin_with_dependencies():
     _init_data()
-    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
-    plugins.save_to_gallery(macgyver, plugindir / "plugin2")
+    _install_test_plugin_path("user")
+    try:
+        plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+        plugins.save_to_gallery(macgyver, plugindir / "plugin2")
     
-    md = plugins.install_plugin_from_gallery(macgyver, "plugin1")
-    project = get_project(macgyver, macgyver, "BespinSettings")
-    plugin1_dir = project.location / "plugins/plugin1"
-    assert plugin1_dir.exists()
-    assert plugin1_dir.isdir()
+        md = plugins.install_plugin_from_gallery(macgyver, "plugin1")
+        project = get_project(macgyver, macgyver, "BespinSettings")
+        plugin1_dir = project.location / "plugins/plugin1"
+        assert plugin1_dir.exists()
+        assert plugin1_dir.isdir()
     
-    plugin2_dir = project.location / "plugins/plugin2"
-    assert plugin2_dir.exists()
-    assert plugin2_dir.isdir()
+        plugin2_dir = project.location / "plugins/plugin2"
+        assert plugin2_dir.exists()
+        assert plugin2_dir.isdir()
     
-    assert md['plugin1']['name'] == "plugin1"
-    assert md['plugin1']['version'] == "0.9"
-    assert md['plugin2']['version'] == "1.0.1"
+        assert md['plugin1']['name'] == "plugin1"
+        assert md['plugin1']['version'] == "0.9"
+        assert md['plugin2']['version'] == "1.0.1"
+    finally:
+        _install_test_plugin_path()
     
 # WEB TESTS
 
 def test_plugin_upload_from_the_web():
     _init_data()
-    sfp = (path(__file__).dirname() / "plugindir").abspath() / "single_file_plugin3.js"
-    sfp_content = sfp.text()
-    response = app.put("/file/at/myplugins/single_file_plugin3.js", sfp_content)
-    response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
-"plugins": ["myplugins/single_file_plugin3.js"],
-"pluginOrdering": ["single_file_plugin3"]
-}""")
-    response = app.post("/plugin/upload/single_file_plugin3")
-    assert response.body == "OK"
+    _install_test_plugin_path("user")
+    try:
+        sfp = (path(__file__).dirname() / "plugindir").abspath() / "single_file_plugin3.js"
+        sfp_content = sfp.text()
+        response = app.put("/file/at/myplugins/single_file_plugin3.js", sfp_content)
+        response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
+    "plugins": ["myplugins/single_file_plugin3.js"],
+    "pluginOrdering": ["single_file_plugin3"]
+    }""")
+        response = app.post("/plugin/upload/single_file_plugin3")
+        assert response.body == "OK"
     
-    s = config.c.session_factory()
-    num_plugins = s.query(GalleryPlugin).count()
-    assert num_plugins == 1
-    plugin = s.query(GalleryPlugin).first()
-    assert plugin.name == "single_file_plugin3"
+        s = config.c.session_factory()
+        num_plugins = s.query(GalleryPlugin).count()
+        assert num_plugins == 1
+        plugin = s.query(GalleryPlugin).first()
+        assert plugin.name == "single_file_plugin3"
     
-    response = app.post("/plugin/upload/single_file_plugin3", status=400)
-    print response.body
-    assert response.body == "single_file_plugin3 version 2.3.2 already exists"
+        response = app.post("/plugin/upload/single_file_plugin3", status=400)
+        print response.body
+        assert response.body == "single_file_plugin3 version 2.3.2 already exists"
+    finally:
+        _install_test_plugin_path()
     
 def test_plugin_upload_wont_replace_builtin_plugin():
     _init_data()
@@ -462,49 +483,62 @@ def test_plugin_upload_wont_replace_builtin_plugin():
     
 def test_plugin_upload_wont_work_for_someone_elses_plugin():
     _init_data()
+    _install_test_plugin_path("user")
+
+    try:
+        sfp = (path(__file__).dirname() / "plugindir").abspath() / "single_file_plugin3.js"
+        sfp_content = sfp.text()
+        response = app.put("/file/at/myplugins/single_file_plugin3.js", sfp_content)
+        response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
+    "plugins": ["myplugins/single_file_plugin3.js"],
+    "pluginOrdering": ["single_file_plugin3"]
+    }""")
+        response = app.post("/plugin/upload/single_file_plugin3")
+        assert response.body == "OK"
     
-    sfp = (path(__file__).dirname() / "plugindir").abspath() / "single_file_plugin3.js"
-    sfp_content = sfp.text()
-    response = app.put("/file/at/myplugins/single_file_plugin3.js", sfp_content)
-    response = app.put("/file/at/BespinSettings/pluginInfo.json", """{
-"plugins": ["myplugins/single_file_plugin3.js"],
-"pluginOrdering": ["single_file_plugin3"]
-}""")
-    response = app.post("/plugin/upload/single_file_plugin3")
-    assert response.body == "OK"
-    
-    response = app_murdoc.put("/file/at/myplugins/single_file_plugin3.js", sfp_content)
-    response = app_murdoc.put("/file/at/BespinSettings/pluginInfo.json", """{
-"plugins": ["myplugins/single_file_plugin3.js"],
-"pluginOrdering": ["single_file_plugin3"]
-}""")
-    response = app_murdoc.post("/plugin/upload/single_file_plugin3", status=401)
-    print response.body
-    assert response.body == "Plugin 'single_file_plugin3' is owned by another user"
+        response = app_murdoc.put("/file/at/myplugins/single_file_plugin3.js", sfp_content)
+        response = app_murdoc.put("/file/at/BespinSettings/pluginInfo.json", """{
+    "plugins": ["myplugins/single_file_plugin3.js"],
+    "pluginOrdering": ["single_file_plugin3"]
+    }""")
+        response = app_murdoc.post("/plugin/upload/single_file_plugin3", status=401)
+        print response.body
+        assert response.body == "Plugin 'single_file_plugin3' is owned by another user"
+    finally:
+        _install_test_plugin_path()
     
 def test_plugin_gallery_list():
     _init_data()
-    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+    _install_test_plugin_path("user")
+    try:
+        plugins.save_to_gallery(macgyver, plugindir / "plugin1")
     
-    response = app.get("/plugin/gallery/")
-    assert response.content_type == "application/json"
-    data = loads(response.body)
-    assert len(data) == 1
+        response = app.get("/plugin/gallery/")
+        assert response.content_type == "application/json"
+        data = loads(response.body)
+        assert len(data) == 1
+    finally:
+        _install_test_plugin_path()
     
 def test_plugin_install_from_gallery():
     _init_data()
-    plugins.save_to_gallery(macgyver, plugindir / "single_file_plugin3.js")
+    _install_test_plugin_path("user")
     
-    response = app.post("/plugin/install/single_file_plugin3")
-    assert response.content_type == "application/json"
-    data = loads(response.body)
-    assert "single_file_plugin3" in data
-    assert "scripts" in data["single_file_plugin3"]
+    try:
+        plugins.save_to_gallery(macgyver, plugindir / "single_file_plugin3.js")
     
-    project = get_project(macgyver, macgyver, "BespinSettings")
-    sfp3_dir = project.location / "plugins/single_file_plugin3.js"
-    assert sfp3_dir.exists()
-    assert not sfp3_dir.isdir()
+        response = app.post("/plugin/install/single_file_plugin3")
+        assert response.content_type == "application/json"
+        data = loads(response.body)
+        assert "single_file_plugin3" in data
+        assert "scripts" in data["single_file_plugin3"]
+    
+        project = get_project(macgyver, macgyver, "BespinSettings")
+        sfp3_dir = project.location / "plugins/single_file_plugin3.js"
+        assert sfp3_dir.exists()
+        assert not sfp3_dir.isdir()
+    finally:
+        _install_test_plugin_path()
     
 def test_error_message_when_uploading_plugin_without_enough_metadata():
     _init_data()
@@ -522,7 +556,6 @@ def test_error_message_when_uploading_plugin_without_enough_metadata():
 def test_error_when_uploading_plugin_with_name_of_builtin():
     _init_data()
     config.c.plugin_path = _original_plugin_path
-    print "CCPP", config.c.plugin_path
     sfp = (path(__file__).dirname() / "plugindir").abspath() / "single_file_plugin3.js"
     sfp_content = sfp.text()
     response = app.put("/file/at/myplugins/text_editor.js", sfp_content)
@@ -530,22 +563,23 @@ def test_error_when_uploading_plugin_with_name_of_builtin():
 "plugins": ["myplugins/text_editor.js"],
 "pluginOrdering": ["text_editor"]
 }""")
-    try:
-        response = app.post("/plugin/upload/text_editor", status=400)
-        print response.body
-        assert response.body == "Plugin text_editor is a pre-existing core plugin"
-    finally:
-        _install_test_plugin_path()
+    response = app.post("/plugin/upload/text_editor", status=400)
+    print response.body
+    assert response.body == "Plugin text_editor is a pre-existing core plugin"
 
 def test_download_a_plugin():
-    _init_data()
-    plugins.save_to_gallery(macgyver, plugindir / "plugin1")
-    plugins.save_to_gallery(macgyver, plugindir / "single_file_plugin3.js")
+    _install_test_plugin_path("user")
+    try:
+        _init_data()
+        plugins.save_to_gallery(macgyver, plugindir / "plugin1")
+        plugins.save_to_gallery(macgyver, plugindir / "single_file_plugin3.js")
     
-    response = app.get("/plugin/download/plugin1/current/")
-    assert response.content_type == "application/zip"
+        response = app.get("/plugin/download/plugin1/current/")
+        assert response.content_type == "application/zip"
     
-    response = app.get("/plugin/download/single_file_plugin3/current/")
-    assert response.content_type == "text/javascript"
+        response = app.get("/plugin/download/single_file_plugin3/current/")
+        assert response.content_type == "text/javascript"
     
-    response = app.get("/plugin/download/doesnotexist/current/", status=404)
+        response = app.get("/plugin/download/doesnotexist/current/", status=404)
+    finally:
+        _install_test_plugin_path()

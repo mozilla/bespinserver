@@ -326,7 +326,7 @@ def save_to_gallery(user, location):
         raise PluginError("Errors in plugin metadata: %s" % (list(errors),))
     
     plugin = lookup_plugin(metadata['name'], config.c.plugin_path)
-    if plugin and plugin.location_name == "supported":
+    if plugin and plugin.location_name != "user":
         raise PluginError('Plugin %s is a pre-existing core plugin' % (metadata['name']))
     
     plugin = GalleryPlugin.get_plugin(metadata['name'], user, create=True)
