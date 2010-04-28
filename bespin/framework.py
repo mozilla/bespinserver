@@ -123,10 +123,10 @@ def expose(url_pattern, method=None, auth=True, skip_token_check=False, profile=
                     header_token = environ.get("HTTP_X_DOMAIN_TOKEN")
 
                     if cookie_token is None or header_token != cookie_token:
-                        log.info("request.url=%s" % request.url)
-                        log.info("cookies[Domain-Token]=%s" % cookie_token)
-                        log.info("headers[X-Domain-Token]=%s" % header_token)
-                        log.info("WARNING: The anti CSRF attack trip wire just went off. This means an unprotected request has been made. This could be a hacking attempt, or incomplete protection. The request has NOT been halted")
+                        # log.info("request.url=%s" % request.url)
+                        # log.info("cookies[Domain-Token]=%s" % cookie_token)
+                        # log.info("headers[X-Domain-Token]=%s" % header_token)
+                        # log.info("WARNING: The anti CSRF attack trip wire just went off. This means an unprotected request has been made. This could be a hacking attempt, or incomplete protection. The request has NOT been halted")
                         config.c.stats.incr("csrf_fail_DATE")
 
                 # Do we need to do this?
