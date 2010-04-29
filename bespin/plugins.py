@@ -111,23 +111,31 @@ class Plugin(BasePlugin):
         if not server_base_url.startswith("/"):
             server_base_url = "/" + server_base_url
         name = self.name
-        
+
+        resources = list()
+        md['tiki:resources'] = resources
         if self.location_name == "user":
-            md['scripts'] = [
-                dict(url="%sgetscript/file/at/%s%%3A%s" % (
-                    server_base_url, self.relative_location, 
-                    scriptname),
+            resources.extend([
+                dict(type='script',
+                    url="%sgetscript/file/at/%s%%3A%s" % (
+                        server_base_url, self.relative_location,
+                        scriptname),
+                    name=scriptname if scriptname != "" else "index",
                     id="%s:%s" % (name, scriptname))
-                    for scriptname in self.scripts
-                ]
+                for scriptname in self.scripts
+            ])
+
             version_stamp = int(time.time()) if not "version" in md else md['version']
-            md['stylesheets'] = [
-                dict(url="%spreview/at/%s/%s?%s" % (
-                    server_base_url, self.relative_location, 
-                    stylesheet, version_stamp),
+            resources.extend([
+                dict(type='stylesheet',
+                    url="%spreview/at/%s/%s?%s" % (
+                        server_base_url, self.relative_location,
+                        stylesheet, version_stamp),
+                    name=stylesheet,
                     id="%s:%s" % (name, stylesheet))
                 for stylesheet in self.stylesheets
-            ]
+            ])
+
             md["resourceURL"] = "%sfile/at/%s/resources/" % (
                 server_base_url, self.relative_location)
             user_location = self.relative_location
@@ -135,22 +143,28 @@ class Plugin(BasePlugin):
                 user_location += "/"
             md['userLocation'] = user_location
         else:
-            md['scripts'] = [
-                dict(url="%splugin/script/%s/%s/%s" % (
-                    server_base_url, self.location_name, 
-                    name, scriptname),
+            resources.extend([
+                dict(type='script',
+                    url="%splugin/script/%s/%s/%s" % (
+                        server_base_url, self.location_name,
+                        name, scriptname),
+                    name=scriptname if scriptname != "" else "index",
                     id="%s:%s" % (name, scriptname))
-                    for scriptname in self.scripts
-                ]
+                for scriptname in self.scripts
+            ])
             
             version_stamp = int(time.time()) if VERSION == "tip" else VERSION
-            md['stylesheets'] = [
-                dict(url="%splugin/file/%s/%s/%s?%s" % (
-                    server_base_url, self.location_name, name, 
-                    stylesheet, version_stamp),
+
+            resources.extend([
+                dict(type='stylesheet',
+                    url="%splugin/file/%s/%s/%s?%s" % (
+                        server_base_url, self.location_name, name,
+                        stylesheet, version_stamp),
+                    name=stylesheet,
                     id="%s:%s" % (name, stylesheet))
                 for stylesheet in self.stylesheets
-            ]
+            ])
+
             md["resourceURL"] = "%splugin/file/%s/%s/resources/" % (
                 server_base_url, self.location_name, name)
         
@@ -410,4 +424,4 @@ def install_plugin_from_gallery(user, plugin_name):
         all_metadata[name] = lookup_plugin(name, path).metadata
     
     return all_metadata
-    
+
