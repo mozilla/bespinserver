@@ -56,7 +56,6 @@ def _check_identifiers(kind, value):
     if not config.c.restrict_identifiers:
         return
     if not good_pattern.match(value):
-        log.error("Invalid identifier kind='%s', value='%s'" % (kind, value))
         raise BadValue("%s must only contain letters, numbers and dashes and must start with a letter or number." % (kind))
 
 def send_text_email(to_addr, subject, text, from_addr=None):
