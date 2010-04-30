@@ -114,10 +114,10 @@ class QueueItem(object):
         error_handler(self, e)
 
     def done(self):
-        if origin == "beanstalk":
+        if self.origin == "beanstalk":
             if self.job:
                 self.job.delete()
-        elif origin == "restmq":
+        elif self.origin == "restmq":
             if self.job:
                 self.job.delete(self.queue, self.id)
 
