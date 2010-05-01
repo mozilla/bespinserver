@@ -1218,6 +1218,26 @@ def _plugin_response(response, path=None, plugin_list=None, log_user=None):
 def register_plugins(request, response):
     return _plugin_response(response)
 
+@expose(r'^/plugin/register/boot$', 'GET', auth=False)
+def register_boot_plugin(request, response):
+    for item in c.plugin_path:
+        if item["name"] == "boot":
+            break
+    
+    if item["name"] != "boot":
+        raise BadRequest("No boot code available")
+    
+    plugin_list = plugins.find_plugins([item])
+    output = ""
+    for plugin in plugin_list:
+        output += """
+%s.register('::%s', %s);
+""" % (c.loader_name, plugin.name, simplejson.dumps(plugin.metadata))
+    response.content_type = "text/javascript"
+    response.body = output
+    return response()
+    
+
 @expose(r'^/plugin/register/user$', 'GET', auth=True)
 def register_user_plugins(request, response):
     pluginInfo, project = get_user_plugin_info(request.user)
@@ -1384,9 +1404,9 @@ def _wrap_script(plugin_name, script_path, script_text):
     else:
         module_name = "index"
         
-    return """; tiki.module('%s:%s', function(require, exports, module) {%s
-;}); tiki.script('%s:%s');""" % (plugin_name, module_name, 
-        script_text, plugin_name, script_path)
+    return """; %s.module('%s:%s', function(require, exports, module) {%s
+;}); %s.script('%s:%s');""" % (c.loader_name, plugin_name, module_name, 
+        script_text, c.loader_name, plugin_name, script_path)
 
 urlmatch = re.compile(r'^(http|https)://')
 

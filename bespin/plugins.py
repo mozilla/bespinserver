@@ -39,6 +39,7 @@ import re
 from urlparse import urlparse
 import time
 import zipfile
+import logging
 
 import simplejson
 
@@ -53,6 +54,8 @@ from bespin.database import GalleryPlugin
 from bespin.filesystem import NotAuthorized, get_project, FileNotFound
 
 leading_slash = re.compile("^/")
+
+log = logging.getLogger("bespin.plugins")
 
 def get_user_plugin_info(user):
     if not user:
@@ -180,6 +183,11 @@ def find_plugins(search_path=None):
     if search_path is None:
         search_path = config.c.plugin_path
     
+    if len(search_path) > 1:
+        search_path = [item for item in search_path 
+                    if not item.get("skip_unless_only")]
+    
+    
     return base_find_plugins(search_path, cls=Plugin)
 
 def lookup_plugin(name, search_path=None):
@@ -187,6 +195,10 @@ def lookup_plugin(name, search_path=None):
     if search_path is None:
         search_path = config.c.plugin_path
     
+    if len(search_path) > 1:
+        search_path = [item for item in search_path 
+                    if not item.get("skip_unless_only")]
+
     return base_lookup_plugin(name, search_path, cls=Plugin)    
 
 def install_plugin(f, url, settings_project, path_entry, plugin_name=None):

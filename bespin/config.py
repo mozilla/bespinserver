@@ -71,6 +71,7 @@ c.pw_secret = "This phrase encrypts passwords."
 c.static_dir = path.getcwd() / ".." / "bespinclient" / "tmp" / "static"
 
 c.plugin_path = []
+c.loader_name = "bespin.tiki"
 
 c.template_file_dir = None
 
@@ -205,7 +206,9 @@ def set_profile(profile):
                     path=client_plugin_path / "supported"),
                     dict(name="thirdparty", 
                         path=client_plugin_path / "thirdparty"),
-                    dict(name="labs", path=client_plugin_path / "labs")]
+                    dict(name="labs", path=client_plugin_path / "labs"),
+                    dict(name="boot", path=client_plugin_path / "boot",
+                        skip_unless_only=True)]
 
     if profile == "test":
         # this import will install the bespin_test store
