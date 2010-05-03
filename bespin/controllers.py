@@ -1385,18 +1385,7 @@ def plugin_templates(request, response):
     response.body = _wrap_script(plugin_name, "templates", """
 var jsmt = require('jsmt');
 
-var templates = jsmt.compileAll(%s);
-
-exports.render = function(name, data) {
-    if (!templates[name]) {
-        throw new Error("Unknown template: " + name);
-    }
-    return templates[name](data);
-};
-
-for (var key in templates) {
-    exports[key] = templates[key];
-}
+jsmt.compileAll(%s, exports);
 
 """ % (simplejson.dumps(templates)))
     return response()
