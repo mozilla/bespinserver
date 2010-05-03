@@ -114,9 +114,14 @@ class Plugin(BasePlugin):
         if not server_base_url.startswith("/"):
             server_base_url = "/" + server_base_url
         name = self.name
-
+        
         resources = list()
         md['tiki:resources'] = resources
+        if (self.location / "templates").isdir():
+            resources.append(dict(type="script", url="%splugin/templates/%s/"
+                % (server_base_url, name), name="templates",
+                id="%s:templates" % name))
+                
         if self.location_name == "user":
             resources.extend([
                 dict(type='script',

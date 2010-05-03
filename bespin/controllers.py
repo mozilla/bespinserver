@@ -1360,6 +1360,47 @@ def plugin_gallery(request, response):
         result.append(data)
     return _respond_json(response, result)
 
+@expose(r'^/plugin/templates/(?P<plugin_name>.*)/$', 'GET', auth=False)
+def plugin_templates(request, response):
+    plugin_name = request.kwargs['plugin_name']
+    if ".." in plugin_name:
+        raise BadRequest("'..' not allowed in plugin names")
+
+    if request.user:
+        path = get_user_plugin_path(request.user)
+    else:
+        path = []
+    path.extend(c.plugin_path)
+    
+    plugin = plugins.lookup_plugin(plugin_name, path)
+    
+    if plugin is None:
+        return _plugin_does_not_exist(response, plugin_name)
+    
+    templates = plugin.templates
+    if not templates:
+        raise FileNotFound("Plugin %s has no templates" % plugin_name)
+    
+    response.content_type = "text/javascript"
+    response.body = _wrap_script(plugin_name, "templates", """
+var jsmt = require('jsmt');
+
+var templates = jsmt.compileAll(%s);
+
+exports.render = function(name, data) {
+    if (!templates[name]) {
+        throw new Error("Unknown template: " + name);
+    }
+    return templates[name](data);
+};
+
+for (var key in templates) {
+    exports[key] = templates[key];
+}
+
+""" % (simplejson.dumps(templates)))
+    return response()
+
 class FileIterable(object):
     def __init__(self, filename):
         self.filename = filename

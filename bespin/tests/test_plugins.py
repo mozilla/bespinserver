@@ -157,6 +157,7 @@ def test_default_plugin_registration():
     assert "plugin1" in response.body
     assert "plugin/script/testplugins/plugin1/thecode.js" in response.body
     assert "plugin/file/testplugins/plugin1/resources/foo/foo.css" in response.body
+    assert "plugin/templates/plugin1/" in response.body
     assert "NOT THERE" not in response.body
     data = loads(response.body)
     md = data["plugin1"]
@@ -171,6 +172,13 @@ def test_get_script_from_plugin():
     content_type = response.content_type
     assert content_type == "text/javascript"
     assert "this is the code" in response.body
+
+def test_get_templates_from_plugin():
+    response = app.get("/plugin/templates/plugin1/")
+    content_type = response.content_type
+    assert content_type == "text/javascript"
+    print response.body
+    assert "js micro template" in response.body
     
 def test_get_script_bad_plugin_location():
     response = app.get("/plugin/script/BOGUSLOCATION/plugin1/thecode.js",
