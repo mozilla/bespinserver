@@ -251,6 +251,7 @@ def set_profile(profile):
         c.test_plugin_path = [dict(name="testing", path=client_plugin_path / "testing")]
         
         c.plugin_path.extend(c.test_plugin_path)
+        c.server_base_url = "/"
 
 def load_config(configfile):
     cp = ConfigParser.ConfigParser()
