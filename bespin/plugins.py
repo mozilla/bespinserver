@@ -61,7 +61,7 @@ def get_user_plugin_info(user):
     if not user:
         return None, None
     
-    project = get_project(user, user, "BespinSettings")
+    project = get_project(user, user, "BespinSettings", create=True)
     
     pluginInfo = None
     try:
@@ -82,7 +82,7 @@ def get_user_plugin_path(user, include_installed=True, plugin_info=None, project
         plugin_info, project = get_user_plugin_info(user)
     
     if project is None:
-        project = get_project(user, user, "BespinSettings")
+        project = get_project(user, user, "BespinSettings", create=True)
     
     path = []
     if plugin_info:
