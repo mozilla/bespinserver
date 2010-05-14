@@ -1377,17 +1377,12 @@ def plugin_templates(request, response):
     if plugin is None:
         return _plugin_does_not_exist(response, plugin_name)
     
-    templates = plugin.templates
-    if not templates:
+    template_module = plugin.template_module
+    if not template_module:
         raise FileNotFound("Plugin %s has no templates" % plugin_name)
     
     response.content_type = "text/javascript"
-    response.body = _wrap_script(plugin_name, "templates", """
-var jsmt = require('jsmt');
-
-jsmt.compileAll(%s, exports);
-
-""" % (simplejson.dumps(templates)))
+    response.body = _wrap_script(plugin_name, "templates", template_module)
     return response()
 
 class FileIterable(object):
