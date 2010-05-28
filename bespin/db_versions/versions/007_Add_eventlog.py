@@ -18,7 +18,7 @@ EventLog = Table('eventlog', metadata,
     Column('ts', DateTime, default=datetime.now),
     Column('kind', String(10)),
     Column('username', String(128), default=None),
-    Column('details', String, default=None),
+    Column('details', Text, default=None),
     mysql_engine='archive'
 )
 
