@@ -233,8 +233,32 @@ def install_plugin(f, url, settings_project, path_entry, plugin_name=None):
     
     plugin = Plugin(plugin_name, destination, path_entry)
     return plugin
-    
-    
+
+
+def filter_plugins(plugin_list, predicate):
+    """Returns a new list of plugins with all plugins that don't satisfy the
+    predicate, as well as all plugins that transitively depend on them,
+    removed.
+    """
+    plugin_table = dict([ (plugin.name, plugin) for plugin in plugin_list ])
+
+    # Create a reverse dependency graph.
+    dep_graph = dict([ (plugin.name, []) for plugin in plugin_list ])
+    for plugin in plugin_list:
+        plugin_name = plugin.name
+        for dep_name in plugin.dependencies:
+            dep_graph[dep_name].append(plugin_name)
+
+    # Build up a blacklist.
+    blacklist = set()
+    to_visit = [ p.name for p in plugin_list if not predicate(p) ]
+    for plugin_name in to_visit:
+        if plugin_name in blacklist:
+            continue
+        blacklist.add(plugin_name)
+        to_visit += dep_graph[plugin_name]
+
+    return [ plugin for plugin in plugin_list if plugin.name not in blacklist ]
 
 # Plugin Gallery functionality
 

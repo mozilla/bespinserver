@@ -1199,14 +1199,22 @@ def _plugin_does_not_exist(response, plugin_name):
     response.body = "Plugin '" + plugin_name + "' does not exist."
     return response()
     
-def _plugin_response(response, path=None, plugin_list=None, log_user=None):
+def _plugin_response(response, path=None, plugin_list=None, log_user=None,
+        environment='main'):
     response.content_type = "application/json"
     
     if plugin_list is None:
         plugin_list = plugins.find_plugins(path)
 
+    def validate_env(plugin):
+        metadata = plugin.metadata
+        if 'environments' not in metadata:
+            return True
+        environments = metadata['environments']
+        return environment not in environments or environments[environment]
+
     metadata = dict((plugin.name, plugin.metadata) 
-        for plugin in plugin_list)
+        for plugin in plugins.filter_plugins(plugin_list, validate_env))
     
     if log_user:
         log_event("userplugin", log_user, len(metadata))
@@ -1265,6 +1273,10 @@ def register_test_plugins(request, response):
     if "test_plugin_path" not in c:
         raise FileNotFound("Test plugins are only in development environment")
     return _plugin_response(response, c.test_plugin_path)
+
+@expose(r'^/plugin/register/worker$', 'GET', auth=False)
+def register_worker_plugins(request, response):
+    return _plugin_response(response, environment='worker')
 
 @expose(r'^/plugin/script/(?P<plugin_location>[^/]+)/(?P<plugin_name>[^/]+)/(?P<path>.*)', 'GET', auth=False)
 def load_script(request, response):
