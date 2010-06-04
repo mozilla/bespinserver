@@ -1200,7 +1200,7 @@ def _plugin_does_not_exist(response, plugin_name):
     return response()
     
 def _plugin_response(response, path=None, plugin_list=None, log_user=None,
-        environment='main'):
+        environment='main', filter_plugins=True):
     response.content_type = "application/json"
     
     if plugin_list is None:
@@ -1212,9 +1212,13 @@ def _plugin_response(response, path=None, plugin_list=None, log_user=None,
             return True
         environments = metadata['environments']
         return environment not in environments or environments[environment]
-
-    metadata = dict((plugin.name, plugin.metadata) 
-        for plugin in plugins.filter_plugins(plugin_list, validate_env))
+    
+    if filter_plugins:
+        metadata = dict((plugin.name, plugin.metadata) 
+            for plugin in plugins.filter_plugins(plugin_list, validate_env))
+    else:
+        metadata = dict((plugin.name, plugin.metadata)
+            for plugin in plugin_list)
     
     if log_user:
         log_event("userplugin", log_user, len(metadata))
@@ -1344,7 +1348,8 @@ def reload_plugin(request, response):
     if plugin is None:
         return _plugin_does_not_exist(response, plugin_name)
     
-    return _plugin_response(response, plugin_list=[plugin])
+    return _plugin_response(response, plugin_list=[plugin], 
+                            filter_plugins=False)
 
 @expose(r'^/plugin/upload/(?P<plugin_name>.+)', 'POST')
 def upload_plugin(request, response):
