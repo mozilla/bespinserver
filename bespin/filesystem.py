@@ -213,6 +213,8 @@ class File(object):
         self._info = None
         if self.location.islink():
             raise FSException("That path is a symlink, and symlinks are not supported.")
+        if self.location.isdir():
+            raise FSException("Directory found where file was expected. (When referring to a directory, use a trailing slash.)")
 
     @property
     def short_name(self):
@@ -265,29 +267,6 @@ class File(object):
     def statusfile(self):
         project = self.project
         return project.location / ".." / (".%s.json" % (project.name))
-
-    #def mark_opened(self, user_obj, mode):
-    #    """Keeps track of this file as being currently open by the
-    #    user with the mode provided."""
-    #    statusfile = self.statusfile
-    #    try:
-    #        lock = Lock(statusfile)
-    #        lock.lock()
-    #        if statusfile.exists():
-    #            statusinfo = statusfile.bytes()
-    #            statusinfo = simplejson.loads(statusinfo)
-    #        else:
-    #            statusinfo = dict()
-    #
-    #        open_files = statusinfo.setdefault("open", {})
-    #        file_users = open_files.setdefault(self.name, {})
-    #        file_users[user_obj.username] = mode
-    #
-    #        statusfile.write_bytes(simplejson.dumps(statusinfo))
-    #        lock.unlock()
-    #    except PULockError, e:
-    #        raise LockError("Problem tracking open status for file %s: %s" %
-    #                    (self.name, str(e)))
 
     @property
     def users(self):

@@ -298,6 +298,13 @@ def test_directory_deletion():
     assert not file_loc.exists()
     assert macgyver.amount_used == starting_used
     
+    bigmac.save_file("newfoo/bar.txt", "just text")
+    try:
+        bigmac.delete("newfoo")
+        assert False, "Expected an exception when deleting a directory without the trailing slash"
+    except FSException, e:
+        pass
+    
 def test_list_top_level():
     _init_data()
     bigmac = get_project(macgyver, macgyver, "bigmac", create=True)
