@@ -1200,7 +1200,7 @@ def _plugin_does_not_exist(response, plugin_name):
     return response()
     
 def _plugin_response(response, path=None, plugin_list=None, log_user=None,
-        environment='main', filter_plugins=True):
+        environment='main', filter_plugins=True, plugin_info=None):
     response.content_type = "application/json"
     
     if plugin_list is None:
@@ -1223,7 +1223,17 @@ def _plugin_response(response, path=None, plugin_list=None, log_user=None,
     if log_user:
         log_event("userplugin", log_user, len(metadata))
     
-    response.body = simplejson.dumps(metadata)
+    if plugin_info is None:
+        resp_body = metadata
+    else:   # user plugins
+        resp_body = {
+            'metadata': metadata,
+            'ordering': plugin_info.get('ordering', []),
+            'deactivated': plugin_info.get('deactivated', {})
+        }
+
+    response.body = simplejson.dumps(resp_body)
+
     return response()
 
 @expose(r'^/plugin/register/defaults$', 'GET', auth=False)
@@ -1248,29 +1258,22 @@ def register_boot_plugin(request, response):
     response.content_type = "text/javascript"
     response.body = output
     return response()
-    
+
+def _user_plugin_response(request, response, environment='main'):
+    plugin_info, project = get_user_plugin_info(request.user)
+    path = get_user_plugin_path(request.user, plugin_info=plugin_info,
+        project=project)
+
+    return _plugin_response(response, path, environment=environment,
+        plugin_info=plugin_info)
 
 @expose(r'^/plugin/register/user$', 'GET', auth=True)
 def register_user_plugins(request, response):
-    pluginInfo, project = get_user_plugin_info(request.user)
-    path = get_user_plugin_path(request.user, plugin_info=pluginInfo, project=project)
+    return _user_plugin_response(request, response)
 
-    plugin_list = plugins.find_plugins(path)
-
-    metadata = dict((plugin.name, plugin.metadata) 
-        for plugin in plugin_list)
-    
-    if pluginInfo is None:
-        pluginInfo = dict(ordering=[], deactivated={});
-    
-    if request.user:
-        log_event("userplugin", request.user, len(metadata))
-        
-    return _respond_json(response, dict({
-        'metadata'   : metadata ,
-        'ordering'   : pluginInfo.get("ordering", []),
-        'deactivated': pluginInfo.get("deactivated", {})
-    }));
+@expose(r'^/plugin/register/user-worker$', 'GET', auth=True)
+def register_user_worker_plugins(request, response):
+    return _user_plugin_response(request, response, 'worker')
 
 @expose(r'^/plugin/register/tests$', 'GET', auth=False)
 def register_test_plugins(request, response):
