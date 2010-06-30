@@ -249,11 +249,7 @@ def filter_plugins(plugin_list, predicate):
         for dep_name in plugin.dependencies:
             dep = dep_graph.get(dep_name)
             if dep is None:
-                if config.c.raise_plugin_dependency_errors:
-                    raise PluginError("Unable to find plugin " 
-                        + dep_name + " while creating metadata list")
-                else:
-                    continue
+                continue
             dep.append(plugin_name)
 
     # Build up a blacklist.

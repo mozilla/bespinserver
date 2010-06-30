@@ -198,14 +198,9 @@ c.using_dojo_source = False
 # stack key here
 c.errorstack_key = None
 
-# If you're running from a build, you don't necessarily want to raise plugin
-# dependency errors
-c.raise_plugin_dependency_errors = False
-
 def set_profile(profile):
     if profile == "test" or profile == "dev":
         client_plugin_path = path.getcwd() / ".." / "bespinclient" / "plugins"
-        c.raise_plugin_dependency_errors = True
         
         c.plugin_path = [dict(name="supported", 
                     path=client_plugin_path / "supported"),
