@@ -707,7 +707,6 @@ def _tell_file_event(user, project, path, event):
     followers = [follower.following.username for follower in followers if follower.following]
     # find the owner
     isMyProject = _is_project_shared(project, user)
-    print "*** 2 " + str(isMyProject)
     for follower in followers:
         #try:
             member = User.find_user(follower)
