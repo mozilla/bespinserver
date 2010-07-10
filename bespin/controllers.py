@@ -658,7 +658,7 @@ def group_remove(request, response):
         rows += group.remove_member(other_user)
     members = group.get_members()
     if len(members) == 0:
-        rows += group.group()
+        rows += group.remove()
     return _respond_json(response, rows)
 
 @expose(r'^/group/add/(?P<group>[^/]+)/$', 'POST')
